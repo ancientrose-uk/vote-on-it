@@ -32,3 +32,5 @@ jobs:
 
       - name: Run Browser Tests
         run: deno task test:browser:all
+        env:
+          VOI__VERBOSE: true

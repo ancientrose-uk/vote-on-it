@@ -11,3 +11,7 @@ Deno.serve({
     })
   },
 });
+Deno.addSignalListener("SIGINT", () => {
+  console.log("interrupted!");
+  Deno.exit();
+});
