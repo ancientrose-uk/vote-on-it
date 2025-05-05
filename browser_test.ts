@@ -62,7 +62,7 @@ async function startServer() {
       "--allow-env=PORT",
       // "--allow-read",
       // "--allow-write",
-      "web-server/index.ts",
+      "start",
     ],
     env: {
       PORT: '' + port,
@@ -120,6 +120,5 @@ describe("Browser Tests", () => {
 
     // Expect the title to be a specific incorrect value to test failure mode
     expect(heading).toBe("Welcome to Vote On It!");
-
   });
 });
