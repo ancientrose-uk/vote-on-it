@@ -56,6 +56,13 @@
       "bin": true
     }
   },
+  "redirects": {
+    "https://deno.land/x/port/mod.ts": "https://deno.land/x/port@1.0.0/mod.ts"
+  },
+  "remote": {
+    "https://deno.land/x/port@1.0.0/mod.ts": "2dc04ce1ccf133ae09205e30b550044c4c6f64a1a7d00ea91c66dbb9f6cc00f5",
+    "https://deno.land/x/port@1.0.0/types.ts": "42d6ae4147d5d67408d60209da070ddfa79ec8389c6cab1b8002df0cf6c03af6"
+  },
   "workspace": {
     "dependencies": [
       "jsr:@std/assert@1",
