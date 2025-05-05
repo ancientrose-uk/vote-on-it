@@ -2,6 +2,13 @@ import {chromium} from "playwright";
 import {expect} from "jsr:@std/expect";
 import {afterAll, describe, it} from "jsr:@std/testing/bdd";
 
+const verboseLog = Deno.env.get("VOI__VERBOSE") === "true" ? console.log : () => {};
+
+setTimeout(() => {
+  console.error('Test took too long!')
+  Deno.exit(1)
+}, 10_000)
+
 type CleanupFn = () => Promise<void>;
 
 const cleanupFunctions: { priority: number; task: CleanupFn }[] = [];
@@ -37,15 +44,18 @@ const sleep =(ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 function arrayBufferToString(arrayBuffer: Uint8Array<ArrayBuffer>) {
   const decoder = new TextDecoder()
-  let data = decoder.decode(arrayBuffer);
+  const data = decoder.decode(arrayBuffer);
   return data;
 }
 
 async function startServer() {
+  verboseLog("Starting server...");
+  const port = "3123";
+  verboseLog('Starting server on port', port);
   const server = new Deno.Command("deno", {
     args: [
       "run",
-      "--allow-net=0.0.0.0:3123",
+      "--allow-net=0.0.0.0:" + port,
       // "--allow-read",
       // "--allow-write",
       "web-server/index.ts",
@@ -58,7 +68,13 @@ async function startServer() {
   const process = server.spawn();
 
   const serverFinishedPromise = process.status.then(async (status) => {
+    console.log({
+      status
+    })
     if (status.success) {
+      await process.stdout.cancel();
+      await process.stderr.cancel();
+      await process.stdin.close();
       return
     }
     const commandOutput = await process.output();
@@ -67,16 +83,15 @@ async function startServer() {
     console.log(' - - - - STD OUT - - - - ')
     console.error(arrayBufferToString(commandOutput.stdout))
     console.log(' - - - - - - - - - - - - ')
+
     throw(new Error("Server process exited with error"));
   })
-  await sleep(1000)
+  // await sleep(1000)
 
   addCleanupTask(async () => {
     process.kill("SIGINT");
     await serverFinishedPromise
   });
-
-  return serverFinishedPromise;
 }
 
 afterAll(async () => {
