@@ -1,0 +1,38 @@
+name: Run Browser Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Set up Deno
+      - name: Set up Deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: v2.3.1
+
+      # Install dependencies
+      - name: Cache Deno dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/deno
+          key: ${{ runner.os }}-deno-${{ hashFiles('deno.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-deno-${{ hashFiles('deno.lock') }}
+
+      # Run browser tests
+      - name: Run Browser Tests
+        run: deno task test:browser:all
+        env:
+          SHOW_BROWSER: false
+          DELAY_BEFORE_CLOSING_BROWSER: 0
