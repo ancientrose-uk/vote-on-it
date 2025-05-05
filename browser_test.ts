@@ -1,6 +1,9 @@
 import { chromium } from "playwright";
 
-const browser = await chromium.launch();
+// Check if the SHOW_BROWSER environment variable is set
+const showBrowser = Deno.env.get("SHOW_BROWSER") === "true";
+
+const browser = await chromium.launch({ headless: !showBrowser });
 const page = await browser.newPage();
 
 await page.goto("https://ancientrose.uk");
