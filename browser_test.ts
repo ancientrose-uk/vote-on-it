@@ -1,6 +1,6 @@
-import { chromium } from "playwright";
-import { expect } from "jsr:@std/expect";
-import { afterAll, describe, it } from "jsr:@std/testing/bdd";
+import {chromium} from "playwright";
+import {expect} from "jsr:@std/expect";
+import {afterAll, describe, it} from "jsr:@std/testing/bdd";
 
 type CleanupFn = () => Promise<void>;
 
@@ -34,6 +34,51 @@ async function getBrowserPage() {
 
 const sleep =(ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
+
+function arrayBufferToString(arrayBuffer: Uint8Array<ArrayBuffer>) {
+  const decoder = new TextDecoder()
+  let data = decoder.decode(arrayBuffer);
+  return data;
+}
+
+async function startServer() {
+  const server = new Deno.Command("deno", {
+    args: [
+      "run",
+      "--allow-net=0.0.0.0:3123",
+      // "--allow-read",
+      // "--allow-write",
+      "web-server/index.ts",
+    ],
+    stdout: "piped",
+    stderr: "piped",
+    stdin: "piped",
+  });
+
+  const process = server.spawn();
+
+  const serverFinishedPromise = process.status.then(async (status) => {
+    if (status.success) {
+      return
+    }
+    const commandOutput = await process.output();
+    console.error(' - - - - STD ERR - - - - ')
+    console.error(arrayBufferToString(commandOutput.stderr))
+    console.log(' - - - - STD OUT - - - - ')
+    console.error(arrayBufferToString(commandOutput.stdout))
+    console.log(' - - - - - - - - - - - - ')
+    throw(new Error("Server process exited with error"));
+  })
+  await sleep(1000)
+
+  addCleanupTask(async () => {
+    process.kill("SIGINT");
+    await serverFinishedPromise
+  });
+
+  return serverFinishedPromise;
+}
+
 afterAll(async () => {
   await runCleanupTasks();
 })
@@ -41,13 +86,14 @@ afterAll(async () => {
 describe("Browser Tests", () => {
   it("should fail when the title is not as expected", async () => {
     // Check if the SHOW_BROWSER environment variable is set
+    await startServer()
     const { page } = await getBrowserPage();
 
-    await page.goto("https://ancientrose.uk");
-    const title = await page.title();
+    await page.goto("http://localhost:3123");
+    const heading = await page.getByRole('heading', {level: 1}).textContent();
 
     // Expect the title to be a specific incorrect value to test failure mode
-    expect(title).toBe("Ancient Rose - Making Websites Work");
+    expect(heading).toBe("Welcome to Vote On It!");
 
   });
 });
