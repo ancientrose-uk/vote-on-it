@@ -1,6 +1,9 @@
 import {chromium} from "playwright";
 import {expect} from "jsr:@std/expect";
 import {afterAll, describe, it} from "jsr:@std/testing/bdd";
+import {
+  getAvailablePort
+} from "https://deno.land/x/port/mod.ts";
 
 const verboseLog = Deno.env.get("VOI__VERBOSE") === "true" ? console.log : () => {};
 
@@ -50,7 +53,7 @@ function arrayBufferToString(arrayBuffer: Uint8Array<ArrayBuffer>) {
 
 async function startServer() {
   verboseLog("Starting server...");
-  const port = "3123";
+  const port = await getAvailablePort();
   verboseLog('Starting server on port', port);
   const server = new Deno.Command("deno", {
     args: [
@@ -62,7 +65,7 @@ async function startServer() {
       "web-server/index.ts",
     ],
     env: {
-      PORT: port,
+      PORT: '' + port,
     },
     stdout: "piped",
     stderr: "piped",
@@ -96,6 +99,10 @@ async function startServer() {
     process.kill("SIGINT");
     await serverFinishedPromise
   });
+
+  return {
+    baseUrl: `http://localhost:${port}`,
+  }
 }
 
 afterAll(async () => {
@@ -103,12 +110,12 @@ afterAll(async () => {
 })
 
 describe("Browser Tests", () => {
-  it("should fail when the title is not as expected", async () => {
+  it("should fail when the heading is not as expected", async () => {
     // Check if the SHOW_BROWSER environment variable is set
-    await startServer()
+    const { baseUrl } = await startServer()
     const { page } = await getBrowserPage();
 
-    await page.goto("http://localhost:3123");
+    await page.goto(baseUrl);
     const heading = await page.getByRole('heading', {level: 1}).textContent();
 
     // Expect the title to be a specific incorrect value to test failure mode
