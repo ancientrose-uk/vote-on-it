@@ -47,7 +47,7 @@ describe("Browser Tests", () => {
     const title = await page.title();
 
     // Expect the title to be a specific incorrect value to test failure mode
-    expect(title).toBe("this is not the actual title (testing failure mode)");
+    expect(title).toBe("Ancient Rose - Making Websites Work");
 
   });
 });
