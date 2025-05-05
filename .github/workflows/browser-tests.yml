@@ -33,6 +33,3 @@ jobs:
       # Run browser tests
       - name: Run Browser Tests
         run: deno task test:browser:all
-        env:
-          SHOW_BROWSER: false
-          DELAY_BEFORE_CLOSING_BROWSER: 0
