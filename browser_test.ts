@@ -56,10 +56,14 @@ async function startServer() {
     args: [
       "run",
       "--allow-net=0.0.0.0:" + port,
+      "--allow-env=PORT",
       // "--allow-read",
       // "--allow-write",
       "web-server/index.ts",
     ],
+    env: {
+      PORT: port,
+    },
     stdout: "piped",
     stderr: "piped",
     stdin: "piped",
