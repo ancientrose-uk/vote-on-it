@@ -146,7 +146,7 @@ describe("Login Tests", () => {
     await browserFns.visit("/account");
     expect(await browserFns.getCurrentUri()).toBe("/login");
   });
-  it("should not use the real password for envvars", async () => {
+  it("should not use the real password for envvars", () => {
     const password = "not-test-password";
     const envvarstr = prepareUsernamesAndPasswords([{
       username: "testuser",
@@ -173,17 +173,19 @@ describe("Login Tests", () => {
         ]),
       },
     };
-    const { baseUrl, port, dbFile, stopServer } = await startServer(serverConfig);
+    const { baseUrl, port, dbFile, stopServer } = await startServer(
+      serverConfig,
+    );
     const sameConfigAsPreviousStart = {
       ...serverConfig,
       env: {
         ...serverConfig.env,
         VOI__SQLITE_LOCATION: dbFile,
-        PORT: port
-      }
-    }
-    async function runScenario (userNumber: number) {
-      const {browserFns} = await getBrowserPage(baseUrl)
+        PORT: port,
+      },
+    };
+    async function runScenario(userNumber: number) {
+      const { browserFns } = await getBrowserPage(baseUrl);
       await browserFns.visit("/account");
       expect(await browserFns.getCurrentUri()).toBe("/login");
       await browserFns.fillFormWith({
@@ -193,20 +195,20 @@ describe("Login Tests", () => {
       await browserFns.clickButton("Log In");
       expect(await browserFns.getCurrentUri()).toBe("/account");
       return async () => {
-        await browserFns.visit('/account');
+        await browserFns.visit("/account");
         expect(await browserFns.getHeading()).toBe(
           "Welcome to your account user" + userNumber + "!",
         );
-      }
+      };
     }
 
-    const followUps:(() => Promise<void>)[] = []
+    const followUps: (() => Promise<void>)[] = [];
     for (let i = 1; i <= 3; i++) {
       followUps.push(await runScenario(i));
     }
-    await stopServer()
-    await startServer(sameConfigAsPreviousStart)
-    await Promise.all(followUps.map(f => f()));
+    await stopServer();
+    await startServer(sameConfigAsPreviousStart);
+    await Promise.all(followUps.map((f) => f()));
   });
   it("should not use the real password for envvars", () => {
     const password = "not-test-password";

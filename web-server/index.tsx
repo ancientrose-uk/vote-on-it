@@ -1,12 +1,12 @@
 import React from "react";
 import { renderToString } from "react-dom/server";
-import {verboseLog} from "../lib/utils.ts";
-import {lookupRoute} from "./routes.tsx";
-import {AuthHandler} from "../lib/AuthHandler.ts";
+import { verboseLog } from "../lib/utils.ts";
+import { lookupRoute } from "./routes.tsx";
+import { AuthHandler } from "../lib/AuthHandler.ts";
 
 const authHandler = new AuthHandler({
-  allowedUsersFromEnvVars: Deno.env.get('VOI__ALLOWED_USERS'),
-})
+  allowedUsersFromEnvVars: Deno.env.get("VOI__ALLOWED_USERS"),
+});
 
 Deno.serve({
   port: Deno.env.get("PORT") ? Number(Deno.env.get("PORT")) : 0,
@@ -14,23 +14,29 @@ Deno.serve({
     const url = new URL(req.url);
     const { pathname } = url;
     const { method } = req;
-    verboseLog((`Request: ${method} ${pathname}`));
+    verboseLog(`Request: ${method} ${pathname}`);
     const routeHandler = lookupRoute(method, pathname);
     if (routeHandler) {
       const requestContext = authHandler.getRequestContext(req);
-      return requestContext.setCookieOnResponse(await routeHandler({req, authHandler, requestAuthContext: requestContext}));
+      return requestContext.setCookieOnResponse(
+        await routeHandler({
+          req,
+          authHandler,
+          requestAuthContext: requestContext,
+        }),
+      );
     }
     return new Response(renderToString(<h1>You seem to be lost!</h1>), {
       headers: { "Content-Type": "text/html" },
     });
   },
   onListen: (addr) => {
-    console.log(`Listening on url: http://localhost:${addr.port}/`)
+    console.log(`Listening on url: http://localhost:${addr.port}/`);
   },
   onError: (err) => {
     console.error("Error:", err);
-    return new Response('An error occurred', { status: 500 });
-  }
+    return new Response("An error occurred", { status: 500 });
+  },
 });
 
 Deno.addSignalListener("SIGINT", () => {

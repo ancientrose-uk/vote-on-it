@@ -11,15 +11,22 @@ function getDb() {
   const sqliteLocation = Deno.env.get(envVarName);
 
   if (!sqliteLocation) {
-    throw new Error(`${envVarName} is not set, it must be set to a usable path for sqlite`);
+    throw new Error(
+      `${envVarName} is not set, it must be set to a usable path for sqlite`,
+    );
   }
   if (!sqliteLocation.endsWith(".sqlite")) {
     throw new Error(`${envVarName} must end with .sqlite`);
   }
-  if (path.relative(path.join(Deno.cwd(), '.persistence'), sqliteLocation).startsWith("..")) {
-    throw new Error(`${envVarName} must be in persistence directory (which can be symlinked if you want the actual file somewhere else).`);
+  if (
+    path.relative(path.join(Deno.cwd(), ".persistence"), sqliteLocation)
+      .startsWith("..")
+  ) {
+    throw new Error(
+      `${envVarName} must be in persistence directory (which can be symlinked if you want the actual file somewhere else).`,
+    );
   }
-  console.log('creating db at', sqliteLocation);
+  console.log("creating db at", sqliteLocation);
   Deno.mkdirSync(path.dirname(sqliteLocation), { recursive: true });
   db = new Database(sqliteLocation);
   return db;
@@ -41,8 +48,7 @@ export function ensureDbExists() {
                username
                TEXT
            );
-    `,
-  );
+    `);
 }
 
 export function setSession(key: string, username: string) {

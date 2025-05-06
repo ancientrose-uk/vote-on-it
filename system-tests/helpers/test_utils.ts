@@ -1,15 +1,15 @@
-import {chromium} from "playwright";
-import {EventEmitter} from "node:events";
-import {verboseLog} from "../../lib/utils.ts";
-import {afterAll} from "jsr:@std/testing/bdd";
+import { chromium } from "playwright";
+import { EventEmitter } from "node:events";
+import { verboseLog } from "../../lib/utils.ts";
+import { afterAll } from "jsr:@std/testing/bdd";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 
-const logStdio = Deno.env.get("VOI__LOG_STDIO") === "true"
+const logStdio = Deno.env.get("VOI__LOG_STDIO") === "true";
 
 afterAll(async () => {
   await runCleanupTasks();
-})
+});
 
 setTimeout(() => {
   throw new Error("Test took too long!");
@@ -37,7 +37,7 @@ function processBaseUrl(url: string) {
   return `${parsedUrl.protocol}//${parsedUrl.hostname}${port}`;
 }
 
-let existingDelayBeforeClosingBrowser: Promise<void> | null = null
+let existingDelayBeforeClosingBrowser: Promise<void> | null = null;
 function waitForDelayBeforeClosingBrowser() {
   if (existingDelayBeforeClosingBrowser) {
     return existingDelayBeforeClosingBrowser;
@@ -62,7 +62,7 @@ export async function getBrowserPage(baseUrl: string) {
 
   const defaultTimeout = 1000;
 
-  const browser = (await chromium.launch({ headless: !showBrowser }));
+  const browser = await chromium.launch({ headless: !showBrowser });
   const page = await browser.newPage();
 
   addCleanupTask(async () => {
@@ -92,12 +92,15 @@ export async function getBrowserPage(baseUrl: string) {
     });
   }
 
+  // deno-lint-ignore ban-types
   const browserFns: { [name: string]: Function } = {};
 
   function addBrowserFunction(
     name: string,
+    // deno-lint-ignore no-explicit-any
     fn: (...args: any[]) => Promise<any>,
   ) {
+    // deno-lint-ignore no-explicit-any
     browserFns[name] = (...args: any[]) =>
       raceAgainstTimeout(name, () => fn(...args));
   }
@@ -111,60 +114,60 @@ export async function getBrowserPage(baseUrl: string) {
 
   addBrowserFunction("getHeading", async (level = 1) => {
     verboseLog(`getting heading`, level);
-    const heading = await page.getByRole('heading', level).textContent();
+    const heading = await page.getByRole("heading", level).textContent();
     verboseLog(`heading`, level, `is`, heading);
     return heading;
   });
 
-  addBrowserFunction("fillFormWith", async (input: Record<string,string>) => {
-    verboseLog('filling form with', input);
+  addBrowserFunction("fillFormWith", async (input: Record<string, string>) => {
+    verboseLog("filling form with", input);
     for (const [key, value] of Object.entries(input)) {
       await page.locator(getSelectorForFormField(key)).fill(value);
       verboseLog(`filled ${(getSelectorForFormField(key))} with ${value}`);
     }
-    verboseLog('form filled');
-  })
+    verboseLog("form filled");
+  });
 
   addBrowserFunction("clickButton", async (buttonText: string) => {
-    verboseLog('clicking button with text', buttonText);
+    verboseLog("clicking button with text", buttonText);
     const button = page.locator(`button:has-text("${buttonText}")`);
     await button.click();
-    verboseLog('clicked button with text');
-  })
+    verboseLog("clicked button with text");
+  });
 
-  addBrowserFunction("getCurrentUri", async () => {
-    verboseLog('getting current uri');
-    const url = page.url().replace(baseUrl, "");
-    verboseLog('current uri is', url);
-    return url;
-  })
+  addBrowserFunction("getCurrentUri", () =>
+    new Promise((resolve) => {
+      verboseLog("getting current uri");
+      const url = page.url().replace(baseUrl, "");
+      verboseLog("current uri is", url);
+      resolve(url);
+    }));
 
   addBrowserFunction("getErrorMessage", async () => {
-    verboseLog('getting error message');
+    verboseLog("getting error message");
     const message = await page.locator(".errorMessage").textContent();
-    verboseLog('got error message', message);
+    verboseLog("got error message", message);
     return message;
-  })
+  });
 
   addBrowserFunction("getFieldValue", async (fieldName: string) => {
-    verboseLog('getting field value');
-    const value = await page.locator(getSelectorForFormField(fieldName)).inputValue();
-    verboseLog('got field value', value);
+    verboseLog("getting field value");
+    const value = await page.locator(getSelectorForFormField(fieldName))
+      .inputValue();
+    verboseLog("got field value", value);
     return value;
-  })
+  });
 
-  addBrowserFunction("differentUsersBrowser", async () => {
+  addBrowserFunction("differentUsersBrowser", () => {
     return getBrowserPage(baseUrl);
-  })
+  });
 
-  return { page, browserFns};
+  return { page, browserFns };
 }
-
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 type StartServerConfig = {
   env?: Record<string, string>;
-}
+};
 
 export async function startServer(config: StartServerConfig = {}) {
   verboseLog("Starting server...");
@@ -179,7 +182,7 @@ export async function startServer(config: StartServerConfig = {}) {
   const preparedEnvVars = ensureSqliteLocationSet({
     PORT: "0",
     NODE_ENV: "production",
-    VOI__VERBOSE: Deno.env.get('VOI__VERBOSE') || '',
+    VOI__VERBOSE: Deno.env.get("VOI__VERBOSE") || "",
     ...config?.env,
   });
   const server = new Deno.Command("deno", {
@@ -285,7 +288,7 @@ export async function startServer(config: StartServerConfig = {}) {
     baseUrl: url,
     port: new URL(url).port,
     dbFile: preparedEnvVars.VOI__SQLITE_LOCATION,
-    stopServer
+    stopServer,
   };
 
   function logStdOutAndError() {
@@ -297,19 +300,24 @@ export async function startServer(config: StartServerConfig = {}) {
   }
 
   function ensureSqliteLocationSet(env?: Record<string, string>) {
-    const sqliteLocation = env?.VOI__SQLITE_LOCATION
+    const sqliteLocation = env?.VOI__SQLITE_LOCATION;
     if (sqliteLocation) {
-      return env
+      return env;
     }
-    const generatedSqliteLocation = path.join('.persistence', 'test-runs', `sqlite-for-test-${randomUUID()}`, 'db.sqlite');
+    const generatedSqliteLocation = path.join(
+      ".persistence",
+      "test-runs",
+      `sqlite-for-test-${randomUUID()}`,
+      "db.sqlite",
+    );
     const dir = path.dirname(generatedSqliteLocation);
     addCleanupTask(async () => {
       await Deno.remove(dir, { recursive: true });
-    }, -2)
+    }, -2);
     return {
       ...env,
       VOI__SQLITE_LOCATION: generatedSqliteLocation,
-    }
+    };
   }
 }
 async function streamToEventEmitter(
