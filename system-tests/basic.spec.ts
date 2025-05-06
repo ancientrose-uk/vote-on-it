@@ -14,7 +14,7 @@ describe("Basic Tests", () => {
   });
   it("should 404 when requesting a page that doesn't exist", async () => {
     const { baseUrl } = await startServer();
-    const { browserFns } = await getBrowserPage(baseUrl);
+    const { browserFns } = await getBrowserPage(baseUrl, { jsEnabled: false });
 
     await browserFns.visit("/nope");
     const heading = await browserFns.getHeading();

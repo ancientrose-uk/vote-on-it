@@ -38,7 +38,7 @@ describe("Login Tests", () => {
         ]),
       },
     });
-    const { browserFns } = await getBrowserPage(baseUrl);
+    const { browserFns } = await getBrowserPage(baseUrl, { jsEnabled: false });
 
     await browserFns.visit("/login");
     expect(await browserFns.getHeading()).toBe("Log in to your account");
@@ -65,7 +65,7 @@ describe("Login Tests", () => {
         }]),
       },
     });
-    const { browserFns } = await getBrowserPage(baseUrl);
+    const { browserFns } = await getBrowserPage(baseUrl, { jsEnabled: false });
 
     await browserFns.visit("/login");
     expect(await browserFns.getHeading()).toBe("Log in to your account");
@@ -84,7 +84,7 @@ describe("Login Tests", () => {
   });
   it("helpful message when user doesn't enter password", async () => {
     const { baseUrl } = await startServer();
-    const { browserFns } = await getBrowserPage(baseUrl);
+    const { browserFns } = await getBrowserPage(baseUrl, { jsEnabled: false });
 
     await browserFns.visit("/login");
     expect(await browserFns.getFieldValue("username")).toBe("");
@@ -103,7 +103,7 @@ describe("Login Tests", () => {
   });
   it("helpful message when user doesn't enter username", async () => {
     const { baseUrl } = await startServer();
-    const { browserFns } = await getBrowserPage(baseUrl);
+    const { browserFns } = await getBrowserPage(baseUrl, { jsEnabled: false });
 
     await browserFns.visit("/login");
     expect(await browserFns.getFieldValue("password")).toBe("");
@@ -122,7 +122,7 @@ describe("Login Tests", () => {
   });
   it("helpful message when user doesn't enter username and password", async () => {
     const { baseUrl } = await startServer();
-    const { browserFns } = await getBrowserPage(baseUrl);
+    const { browserFns } = await getBrowserPage(baseUrl, { jsEnabled: false });
 
     await browserFns.visit("/login");
 
@@ -185,7 +185,9 @@ describe("Login Tests", () => {
       },
     };
     async function runScenario(userNumber: number) {
-      const { browserFns } = await getBrowserPage(baseUrl);
+      const { browserFns } = await getBrowserPage(baseUrl, {
+        jsEnabled: false,
+      });
       await browserFns.visit("/account");
       expect(await browserFns.getCurrentUri()).toBe("/login");
       await browserFns.fillFormWith({

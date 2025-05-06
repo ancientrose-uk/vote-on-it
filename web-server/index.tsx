@@ -1,8 +1,10 @@
-import React from "react";
-import { renderToString } from "react-dom/server";
 import { verboseLog } from "../lib/utils.ts";
-import { lookupRoute } from "./routes.tsx";
+import { defaultHandler, lookupRoute } from "./routes.tsx";
 import { AuthHandler } from "../lib/AuthHandler.ts";
+import { serveFile } from "jsr:@std/http/file-server";
+import path from "node:path";
+
+const dirname = path.dirname(new URL(import.meta.url).pathname);
 
 const authHandler = new AuthHandler({
   allowedUsersFromEnvVars: Deno.env.get("VOI__ALLOWED_USERS"),
@@ -14,10 +16,20 @@ Deno.serve({
     const url = new URL(req.url);
     const { pathname } = url;
     const { method } = req;
+    if (
+      pathname.startsWith("/static/") && method === "GET" &&
+      !pathname.includes("..")
+    ) {
+      const staticFilePath = path.join(
+        dirname,
+        pathname.replace("/static/", "/public/"),
+      );
+      return serveFile(req, staticFilePath);
+    }
     verboseLog(`Request: ${method} ${pathname}`);
     const routeHandler = lookupRoute(method, pathname);
+    const requestContext = authHandler.getRequestContext(req);
     if (routeHandler) {
-      const requestContext = authHandler.getRequestContext(req);
       return requestContext.setCookieOnResponse(
         await routeHandler({
           req,
@@ -26,8 +38,10 @@ Deno.serve({
         }),
       );
     }
-    return new Response(renderToString(<h1>You seem to be lost!</h1>), {
-      headers: { "Content-Type": "text/html" },
+    return defaultHandler({
+      req,
+      authHandler,
+      requestAuthContext: requestContext,
     });
   },
   onListen: (addr) => {

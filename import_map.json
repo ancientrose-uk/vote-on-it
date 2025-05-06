@@ -1,0 +1,10 @@
+{
+  "imports": {
+    "react": "https://esm.sh/stable/react@18.2.0?external=react&target=denonext",
+    "react-dom": "https://esm.sh/stable/react-dom@18.2.0?external=react&target=denonext",
+    "react-dom/client": "https://esm.sh/stable/react-dom@18.2.0/client?external=react&target=denonext",
+    "react/jsx-runtime": "https://esm.sh/stable/react@18.2.0/jsx-runtime?external=react&target=denonext",
+    "react-router-dom": "https://esm.sh/stable/react-router-dom@6.21.1?external=react&target=denonext",
+    "node:process": "https://deno.land/std@0.217.0/node/process.ts"
+  }
+}
