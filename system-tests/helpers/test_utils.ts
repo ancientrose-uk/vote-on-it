@@ -2,6 +2,8 @@ import {chromium} from "playwright";
 import {EventEmitter} from "node:events";
 import {verboseLog} from "../../lib/utils.ts";
 import {afterAll} from "jsr:@std/testing/bdd";
+import path from "node:path";
+import { randomUUID } from "node:crypto";
 
 const logStdio = Deno.env.get("VOI__LOG_STDIO") === "true"
 
@@ -174,14 +176,15 @@ export async function startServer(config: StartServerConfig = {}) {
   let fullStdoutAndStderr = "";
   let processStillOpen = false;
 
+  const preparedEnvVars = ensureSqliteLocationSet({
+    PORT: "0",
+    NODE_ENV: "production",
+    VOI__VERBOSE: Deno.env.get('VOI__VERBOSE') || '',
+    ...config?.env,
+  });
   const server = new Deno.Command("deno", {
     args: ["task", "start"],
-    env: {
-      PORT: "0",
-      NODE_ENV: "production",
-      VOI__VERBOSE: Deno.env.get('VOI__VERBOSE') || '',
-      ...config?.env,
-    },
+    env: preparedEnvVars,
     stdout: "piped",
     stderr: "piped",
     stdin: "piped",
@@ -245,12 +248,13 @@ export async function startServer(config: StartServerConfig = {}) {
     }
   });
 
-  addCleanupTask(async () => {
+  const stopServer = async () => {
     if (processStillOpen) {
       process.kill("SIGINT");
     }
     await serverFinishedPromise;
-  }, -100);
+  };
+  addCleanupTask(stopServer, -1);
 
   const url: string = await new Promise((resolve, reject) => {
     let hasReturned = false;
@@ -279,6 +283,9 @@ export async function startServer(config: StartServerConfig = {}) {
 
   return {
     baseUrl: url,
+    port: new URL(url).port,
+    dbFile: preparedEnvVars.VOI__SQLITE_LOCATION,
+    stopServer
   };
 
   function logStdOutAndError() {
@@ -288,8 +295,23 @@ export async function startServer(config: StartServerConfig = {}) {
     console.log(fullStdoutAndStderr);
     console.log(" -- -- -- -- --");
   }
-}
 
+  function ensureSqliteLocationSet(env?: Record<string, string>) {
+    const sqliteLocation = env?.VOI__SQLITE_LOCATION
+    if (sqliteLocation) {
+      return env
+    }
+    const generatedSqliteLocation = path.join('.persistence', 'test-runs', `sqlite-for-test-${randomUUID()}`, 'db.sqlite');
+    const dir = path.dirname(generatedSqliteLocation);
+    addCleanupTask(async () => {
+      await Deno.remove(dir, { recursive: true });
+    }, -2)
+    return {
+      ...env,
+      VOI__SQLITE_LOCATION: generatedSqliteLocation,
+    }
+  }
+}
 async function streamToEventEmitter(
   stream: ReadableStream<Uint8Array>,
   emitter: EventEmitter,

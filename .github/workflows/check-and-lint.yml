@@ -1,0 +1,34 @@
+name: Run Browser Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test:
+    runs-on: win11
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: v2.3.1
+
+      - name: Cache Deno dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/deno
+          key: ${{ runner.os }}-deno-${{ hashFiles('deno.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-deno-${{ hashFiles('deno.lock') }}
+
+      - name: Run Type Check
+        run: deno check
+
+#      - name: Run Lint
+#        run: deno lint

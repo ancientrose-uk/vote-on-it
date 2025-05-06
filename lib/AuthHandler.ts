@@ -1,4 +1,7 @@
 import {shaEncryptPassword} from "../system-tests/helpers/encryption.ts";
+import {ensureDbExists, getSession, setSession} from "./database-access.ts";
+
+ensureDbExists()
 
 interface AuthHandlerConfig {
   allowedUsersFromEnvVars?: string;
@@ -34,7 +37,6 @@ export class AuthHandler {
 type User = {
   username: string;
 }
-const sessionTokenStore = new Map<string, User>();
 
 export class RequestContext {
   public constructor(
@@ -47,7 +49,7 @@ export class RequestContext {
   public async validateCredentialsAndCreateSession(username:string, password:string): Promise<boolean> {
     if (await this.authHandler.validateCredentials(username, password)) {
       const token = crypto.randomUUID();
-      sessionTokenStore.set(token, {username});
+      setSession(token, username);
       this.setCookieResponse = `session=${token}; HttpOnly; Path=/; Max-Age=${24*60*60*1000}`;
       return true;
     }
@@ -62,9 +64,9 @@ export class RequestContext {
     const match = cookie.match(/session=([^;]+)/);
     if (match) {
       const token = match[1];
-      const user = sessionTokenStore.get(token);
-      if (user) {
-        return user;
+      const username = getSession(token);
+      if (username) {
+        return {username};
       } else {
         this.setCookieResponse = `session=; HttpOnly; Path=/; Max-Age=0`;
       }
