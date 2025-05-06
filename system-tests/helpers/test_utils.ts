@@ -1,8 +1,13 @@
 import {chromium} from "playwright";
 import {EventEmitter} from "node:events";
 import {verboseLog} from "../../lib/utils.ts";
+import { afterAll } from "jsr:@std/testing/bdd";
 
 const logStdio = Deno.env.get("VOI__LOG_STDIO") === "true"
+
+afterAll(async () => {
+  await runCleanupTasks();
+})
 
 setTimeout(() => {
   throw new Error("Test took too long!");
@@ -55,7 +60,6 @@ export async function getBrowserPage(baseUrl: string) {
   const page = await browser.newPage();
 
   addCleanupTask(async () => {
-    console.log('cleaning up browser')
     await waitForDelayBeforeClosingBrowser();
     await browser.close();
   });
@@ -106,12 +110,33 @@ export async function getBrowserPage(baseUrl: string) {
     return heading;
   });
 
+  addBrowserFunction("fillFormWith", async (input: Record<string,string>) => {
+    verboseLog('filling form with', input);
+    for (const [key, value] of Object.entries(input)) {
+      const selector = `input[name="${key}"]`;
+      await page.locator(selector).fill(value);
+      verboseLog(`filled ${selector} with ${value}`);
+    }
+    verboseLog('form filled');
+  })
+
+  addBrowserFunction("clickButton", async (buttonText: string) => {
+    verboseLog('clicking button with text', buttonText);
+    const button = page.locator(`button:has-text("${buttonText}")`);
+    await button.click();
+    verboseLog('clicked button with text');
+  })
+
   return { page, browserFns };
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-export async function startServer() {
+type StartServerConfig = {
+  env?: Record<string, string>;
+}
+
+export async function startServer(config: StartServerConfig = {}) {
   verboseLog("Starting server...");
   const logLineToLookFor = "Listening on url: ";
 
@@ -127,6 +152,7 @@ export async function startServer() {
       PORT: "0",
       NODE_ENV: "production",
       VOI__VERBOSE: Deno.env.get('VOI__VERBOSE') || '',
+      ...config?.env,
     },
     stdout: "piped",
     stderr: "piped",
@@ -139,9 +165,6 @@ export async function startServer() {
 
   const serverFinishedPromise = process.status.then(async (status) => {
     processStillOpen = false;
-    console.log({
-      status,
-    });
     await Promise.all(streamPromises);
     await process.stdout.cancel();
     await process.stderr.cancel();
@@ -195,7 +218,6 @@ export async function startServer() {
   });
 
   addCleanupTask(async () => {
-    console.log('stopping server')
     if (processStillOpen) {
       process.kill("SIGINT");
     }
