@@ -7,15 +7,22 @@ afterAll(async () => {
 })
 
 describe("Browser Tests", () => {
-  it("should fail when the heading is not as expected", async () => {
-    // Check if the SHOW_BROWSER environment variable is set
+  it("should have a sensible main heading", async () => {
     const { baseUrl } = await startServer()
-    const { page } = await getBrowserPage();
+    const { browserFns } = await getBrowserPage(baseUrl);
 
-    await page.goto(baseUrl);
-    const heading = await page.getByRole('heading', {level: 1}).textContent();
+    await browserFns.visit('/');
+    const heading = await browserFns.getHeading();
 
-    // Expect the title to be a specific incorrect value to test failure mode
     expect(heading).toBe("Welcome to Vote On It!");
+  });
+  it("should 404 when requesting a page that doesn't exist", async () => {
+    const { baseUrl } = await startServer()
+    const { browserFns } = await getBrowserPage(baseUrl);
+
+    await browserFns.visit('/nope');
+    const heading = await browserFns.getHeading();
+
+    expect(heading).toBe("You seem to be lost!");
   });
 });
