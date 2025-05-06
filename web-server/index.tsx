@@ -1,5 +1,5 @@
 import React from "react";
-import { renderToString } from "https://esm.sh/react-dom/server";
+import { renderToString } from "react-dom/server";
 
 const report = `Env var: ${Deno.env.get('NODE_ENV')}`
 
