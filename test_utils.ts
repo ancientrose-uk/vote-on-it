@@ -44,12 +44,6 @@ export async function getBrowserPage() {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-function arrayBufferToString(arrayBuffer: Uint8Array<ArrayBuffer>) {
-  const decoder = new TextDecoder();
-  const data = decoder.decode(arrayBuffer);
-  return data;
-}
-
 export async function startServer() {
   verboseLog("Starting server...");
   const logLineToLookFor = "Listening on url: ";
@@ -57,6 +51,8 @@ export async function startServer() {
   const events = new EventEmitter();
   let fullStdout = ''
   let fullStderr = ''
+  let fullStdoutAndStderr = ''
+  let processStillOpen = false
 
   const server = new Deno.Command("deno", {
     args: ["task", "start"],
@@ -68,11 +64,13 @@ export async function startServer() {
     stderr: "piped",
     stdin: "piped",
   });
-
   const streamPromises:Promise<void>[] = []
+
   const process = server.spawn();
+  processStillOpen = true
 
   const serverFinishedPromise = process.status.then(async (status) => {
+    processStillOpen = false
     console.log({
       status,
     });
@@ -81,6 +79,9 @@ export async function startServer() {
     await process.stderr.cancel();
     await process.stdin.close();
     if (!status.success) {
+      events.emit('SERVER_CRASHED')
+      logStdOutAndError()
+
       throw new Error("Server process exited with error");
       }
   });
@@ -90,9 +91,11 @@ export async function startServer() {
 
   events.on('stdout', (data) => {
     fullStdout += data
+    fullStdoutAndStderr += data
   })
   events.on('stderr', (data) => {
     fullStderr += data
+    fullStdoutAndStderr += data
   })
   events.on('stdout', (data) => {
     if (data.startsWith(logLineToLookFor)) {
@@ -104,7 +107,9 @@ export async function startServer() {
   })
 
   addCleanupTask(async () => {
-    process.kill("SIGINT");
+    if (processStillOpen) {
+      process.kill("SIGINT");
+    }
     await serverFinishedPromise;
   });
 
@@ -113,14 +118,22 @@ export async function startServer() {
     const timeout = setTimeout(() => {
       if (!hasReturned) {
         hasReturned = true;
+        logStdOutAndError()
         reject(new Error("Timed out waiting for server to start"));
       }
     }, 3000);
     events.on("SERVER_STARTED", (info) => {
-      clearTimeout(timeout);
       if (!hasReturned) {
+        clearTimeout(timeout);
         hasReturned = true;
         resolve(info.url);
+      }
+    });
+    events.on("SERVER_CRASHED", () => {
+      if (!hasReturned) {
+        clearTimeout(timeout);
+        hasReturned = true;
+        reject(new Error('Server crashed while starting'));
       }
     });
   });
@@ -128,6 +141,14 @@ export async function startServer() {
   return {
     baseUrl: url.substring(0, url.length - 1),
   };
+
+  function logStdOutAndError() {
+    console.log(' -- -- -- -- --')
+    console.log('STDOUT & STDERR from server')
+    console.log('')
+    console.log(fullStdoutAndStderr)
+    console.log(' -- -- -- -- --')
+  }
 }
 
 async function streamToEventEmitter(
