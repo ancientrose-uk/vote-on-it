@@ -57,13 +57,23 @@ function getSelectorForFormField(key: string) {
   return `input[name="${key}"]`;
 }
 
-export async function getBrowserPage(baseUrl: string) {
+type BrowserPageConfig = {
+  jsEnabled: boolean;
+};
+
+export async function getBrowserPage(
+  baseUrl: string,
+  { jsEnabled = true } = {} as BrowserPageConfig,
+) {
   const showBrowser = Deno.env.get("VOI__SHOW_BROWSER") === "true";
 
   const defaultTimeout = 1000;
 
   const browser = await chromium.launch({ headless: !showBrowser });
-  const page = await browser.newPage();
+  const context = await browser.newContext({
+    javaScriptEnabled: jsEnabled,
+  });
+  const page = await context.newPage();
 
   addCleanupTask(async () => {
     await waitForDelayBeforeClosingBrowser();

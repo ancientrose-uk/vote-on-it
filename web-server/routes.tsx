@@ -1,6 +1,7 @@
 import React from "react";
 import { renderToString } from "react-dom/server";
 import { AuthHandler, RequestContext } from "../lib/AuthHandler.ts";
+import { AccountPage, LoginPage } from "./components.tsx";
 
 type RouteContext = {
   req: Request;
@@ -20,71 +21,19 @@ type Routes = {
 
 function getErrorMessage(req: Request, missingFields: string[] = []) {
   if (missingFields.length > 0) {
-    return (
-      <p className="errorMessage">
-        Please enter your {missingFields.join(" and ")}
-      </p>
-    );
+    return `Please enter your ${missingFields.join(" and ")}`;
   }
   const url = new URL(req.url);
   const error = url.searchParams.get("error");
-  console.log("error", error);
   switch (error) {
     case "user-not-found":
-      return <p className="errorMessage">We couldn't find your account</p>;
+      return `We couldn't find your account`;
     default:
       return "";
   }
 }
 
-function getLoginPage(
-  req: Request,
-  missingFields: string[] = [],
-  prefilledUsername = "",
-) {
-  return (
-    <>
-      <h1>Log in to your account</h1>
-      {getErrorMessage(req, missingFields)}
-      <form method="POST" action="/login">
-        <div style={{ padding: "2rem" }}>
-          <label
-            htmlFor="username"
-            style={{
-              display: "block",
-              fontSize: "1.5rem",
-              paddingBottom: "1rem",
-            }}
-          >
-            Username
-          </label>
-          <input
-            type="text"
-            id="username"
-            name="username"
-            value={prefilledUsername}
-          />
-        </div>
-        <div style={{ padding: "2rem" }}>
-          <label
-            htmlFor="password"
-            style={{
-              display: "block",
-              fontSize: "1.5rem",
-              paddingBottom: "1rem",
-            }}
-          >
-            Password
-          </label>
-          <input type="password" id="password" name="password" />
-        </div>
-        <button type="submit" style={{ zoom: 1.25 }}>Log In</button>
-      </form>
-    </>
-  );
-}
-
-export const routes: Routes = {
+const routes: Routes = {
   "/": {
     GET: () => {
       return wrapReactElem(<h1>Welcome to Vote On It!</h1>);
@@ -92,14 +41,16 @@ export const routes: Routes = {
   },
   "/login": {
     GET: ({ req }) => {
-      return wrapReactElem(getLoginPage(req));
+      return wrapReactElem(LoginPage({
+        error: getErrorMessage(req),
+      }));
     },
     POST: async ({ req, requestAuthContext }) => {
       const formData = await req.formData();
       const username = formData.get("username");
       const password = formData.get("password");
 
-      const missingFields = [];
+      const missingFields: string[] = [];
 
       if (!username || typeof username !== "string") {
         missingFields.push("username");
@@ -111,11 +62,10 @@ export const routes: Routes = {
 
       if (missingFields.length > 0) {
         return wrapReactElem(
-          getLoginPage(
-            req,
-            missingFields,
-            typeof username === "string" ? username : "",
-          ),
+          LoginPage({
+            error: getErrorMessage(req, missingFields),
+            prefilledUsername: typeof username === "string" ? username : "",
+          }),
         );
       }
 
@@ -141,19 +91,45 @@ export const routes: Routes = {
       if (!user) {
         return redirect("/login");
       }
-      return wrapReactElem(<h1>Welcome to your account {user.username}!</h1>);
+      return wrapReactElem(AccountPage({ username: user.username }));
     },
   },
 };
+
+export const clientRoutes = Object.keys(routes).reduce((acc, path) => {
+  acc[path] = routes[path].GET;
+  return acc;
+}, {} as { [path: string]: RouteHandler });
+
+console.log("clientRoutes", clientRoutes);
 
 export const defaultHandler: RouteHandler = () => {
   return wrapReactElem(<h1>You seem to be lost!</h1>);
 };
 
-function wrapReactElem(reactElement: React.JSX.Element): Response {
-  return new Response(renderToString(reactElement), {
-    headers: { "Content-Type": "text/html" },
-  });
+function wrapReactElem(
+  reactElement: React.JSX.Element,
+  initialState = {},
+): Response {
+  const html = renderToString(reactElement);
+  return new Response(
+    `<!DOCTYPE html>
+    <html>
+      <head>
+        <title>Vote On It!</title>
+      </head>
+      <body>
+        <div id="root">${html}</div>
+        <script>
+          window.__INITIAL_STATE__ = ${JSON.stringify(initialState)};
+        </script>
+        <script type="module" src="/static/client.js"></script>
+      </body>
+    </html>`,
+    {
+      headers: { "Content-Type": "text/html" },
+    },
+  );
 }
 
 function redirect(url: string, status = 302): Response {
