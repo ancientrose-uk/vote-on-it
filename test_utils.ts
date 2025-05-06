@@ -1,14 +1,14 @@
-import {chromium} from "playwright";
-import {
-  getAvailablePort
-} from "https://deno.land/x/port/mod.ts";
+import { chromium } from "playwright";
+import { getAvailablePort } from "https://deno.land/x/port/mod.ts";
+import { EventEmitter } from "node:events";
 
-const verboseLog = Deno.env.get("VOI__VERBOSE") === "true" ? console.log : () => {};
+const verboseLog =
+  Deno.env.get("VOI__VERBOSE") === "true" ? console.log : () => {};
 
 setTimeout(() => {
-  console.error('Test took too long!')
-  Deno.exit(1)
-}, 10_000)
+  console.error("Test took too long!");
+  Deno.exit(1);
+}, 10_000);
 
 type CleanupFn = () => Promise<void>;
 
@@ -28,7 +28,9 @@ export async function runCleanupTasks() {
 
 export async function getBrowserPage() {
   const showBrowser = Deno.env.get("SHOW_BROWSER") === "true";
-  const delayBeforeClosingBrowser = Number(Deno.env.get("DELAY_BEFORE_CLOSING_BROWSER") || 0);
+  const delayBeforeClosingBrowser = Number(
+    Deno.env.get("DELAY_BEFORE_CLOSING_BROWSER") || 0
+  );
 
   const browser = await chromium.launch({ headless: !showBrowser });
   const page = await browser.newPage();
@@ -40,11 +42,10 @@ export async function getBrowserPage() {
   return { page };
 }
 
-const sleep =(ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
-
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function arrayBufferToString(arrayBuffer: Uint8Array<ArrayBuffer>) {
-  const decoder = new TextDecoder()
+  const decoder = new TextDecoder();
   const data = decoder.decode(arrayBuffer);
   return data;
 }
@@ -52,52 +53,110 @@ function arrayBufferToString(arrayBuffer: Uint8Array<ArrayBuffer>) {
 export async function startServer() {
   verboseLog("Starting server...");
   const port = await getAvailablePort();
-  verboseLog('Starting server on port', port);
+  verboseLog("Starting server on port", port);
+  const logLineToLookFor = "Listening on";
+
+  const events = new EventEmitter();
+  let fullStdout = ''
+  let fullStderr = ''
+
   const server = new Deno.Command("deno", {
-    args: [
-      "task",
-      "start",
-    ],
+    args: ["task", "start"],
     env: {
-      PORT: '' + port,
-      NODE_ENV: 'production'
+      PORT: "" + port,
+      NODE_ENV: "production",
     },
     stdout: "piped",
     stderr: "piped",
     stdin: "piped",
   });
 
-  await sleep(300)
-
   const process = server.spawn();
 
   const serverFinishedPromise = process.status.then(async (status) => {
     console.log({
-      status
-    })
+      status,
+    });
     if (status.success) {
       await process.stdout.cancel();
       await process.stderr.cancel();
       await process.stdin.close();
-      return
+      return;
     }
-    const commandOutput = await process.output();
-    console.error(' - - - - STD ERR - - - - ')
-    console.error(arrayBufferToString(commandOutput.stderr))
-    console.log(' - - - - STD OUT - - - - ')
-    console.error(arrayBufferToString(commandOutput.stdout))
-    console.log(' - - - - - - - - - - - - ')
+    throw new Error("Server process exited with error");
+  });
 
-    throw(new Error("Server process exited with error"));
+  streamToEventEmitter(process.stdout, events, "stdout", serverFinishedPromise);
+  streamToEventEmitter(process.stderr, events, "stderr", serverFinishedPromise);
+
+  events.on('stdout', (data) => {
+    fullStdout += data
   })
-  // await sleep(1000)
+  events.on('stderr', (data) => {
+    fullStderr += data
+  })
+  events.on('stdout', (data) => {
+    if (data.includes(logLineToLookFor)) {
+        events.emit('SERVER_STARTED', {
+            url: 'THIS IS FAKE'
+        })
+    }
+  })
 
   addCleanupTask(async () => {
     process.kill("SIGINT");
-    await serverFinishedPromise
+    await serverFinishedPromise;
+  });
+
+  await new Promise((resolve, reject) => {
+    let hasReturned = false;
+    const timeout = setTimeout(() => {
+      if (!hasReturned) {
+        hasReturned = true;
+        reject(new Error("Timed out waiting for server to start"));
+      }
+    }, 3000);
+    events.on("SERVER_STARTED", (info) => {
+      clearTimeout(timeout);
+      console.log("port is", info.url);
+      if (!hasReturned) {
+        hasReturned = true;
+        resolve(info);
+      }
+    });
   });
 
   return {
     baseUrl: `http://localhost:${port}`,
+  };
+}
+
+async function streamToEventEmitter(
+  stream: ReadableStream<Uint8Array>,
+  emitter: EventEmitter,
+  eventName: string,
+  stopOnPromiseResolveOrReject: Promise<void>
+) {
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+
+  while (true) {
+    const { done, value } = await Promise.any([
+      reader.read(),
+      stopOnPromiseResolveOrReject.catch(() => {}).then(() => {
+        return {
+          done: true,
+          value: new Uint8Array(),
+        };
+      }),
+    ]);
+    if (done) {
+      break;
+    }
+    const decodedValue = decoder.decode(value);
+    emitter.emit(eventName, decodedValue);
   }
+
+  reader.releaseLock();
+  await stream.cancel();
 }
