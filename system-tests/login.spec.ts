@@ -155,7 +155,7 @@ describe("Login Tests", () => {
     expect(envvarstr).not.toContain(password);
   });
   it("should allow multiple different users to be authenticated at once", async () => {
-    const { baseUrl } = await startServer({
+    const serverConfig = {
       env: {
         VOI__ALLOWED_USERS: prepareUsernamesAndPasswords([
           {
@@ -172,7 +172,16 @@ describe("Login Tests", () => {
           },
         ]),
       },
-    });
+    };
+    const { baseUrl, port, dbFile, stopServer } = await startServer(serverConfig);
+    const sameConfigAsPreviousStart = {
+      ...serverConfig,
+      env: {
+        ...serverConfig.env,
+        VOI__SQLITE_LOCATION: dbFile,
+        PORT: port
+      }
+    }
     async function runScenario (userNumber: number) {
       const {browserFns} = await getBrowserPage(baseUrl)
       await browserFns.visit("/account");
@@ -184,6 +193,7 @@ describe("Login Tests", () => {
       await browserFns.clickButton("Log In");
       expect(await browserFns.getCurrentUri()).toBe("/account");
       return async () => {
+        await browserFns.visit('/account');
         expect(await browserFns.getHeading()).toBe(
           "Welcome to your account user" + userNumber + "!",
         );
@@ -194,6 +204,8 @@ describe("Login Tests", () => {
     for (let i = 1; i <= 3; i++) {
       followUps.push(await runScenario(i));
     }
+    await stopServer()
+    await startServer(sameConfigAsPreviousStart)
     await Promise.all(followUps.map(f => f()));
   });
   it("should not use the real password for envvars", () => {
