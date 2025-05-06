@@ -69,9 +69,9 @@ export const routes: Routes = {
   },
   '/account': {
     GET: () => {
-      // if (!hackyCurrentUser) {
-      //   return redirect('/login');
-      // }
+      if (!hackyCurrentUser) {
+        return redirect('/login');
+      }
       return wrapReactElem(<h1>Welcome to your account {hackyCurrentUser}!</h1>);
     },
     POST: () => {

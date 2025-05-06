@@ -66,4 +66,18 @@ describe("Login Tests", () => {
     expect(headingAfterLogin).toBe("Log in to your account");
     expect(await browserFns.getErrorMessage()).toBe("We couldn't find your account");
   });
+  it("redirect users with no session to the login screen if they try to view the logged in page", async () => {
+    const { baseUrl } = await startServer({
+      env: {
+        VOI__ALLOWED_USERS: prepareUsernamesAndPasswords([{
+          username: 'testuser',
+          password: 'not-test-password',
+        }]),
+      }
+    })
+    const { browserFns } = await getBrowserPage(baseUrl);
+
+    await browserFns.visit('/account');
+    expect(await browserFns.getCurrentUri()).toBe('/login');
+  });
 });
