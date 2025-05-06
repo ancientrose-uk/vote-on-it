@@ -7,7 +7,7 @@ type RouteContext = {
   authHandler: AuthHandler;
 };
 
-type RouteHandler = (routeContext?: RouteContext) => Response;
+type RouteHandler = (routeContext: RouteContext) => Response;
 
 type Routes = {
   [path: string]: {
@@ -24,9 +24,21 @@ export const routes: Routes = {
     }
   },
   '/login': {
-    GET: () => {
+    GET: ({req}) => {
+      function getErrorMessage(req: Request) {
+        const url = new URL(req.url);
+        const error = url.searchParams.get("error");
+        console.log('error', error);
+        switch (error) {
+          case "user-not-found":
+            return <p className="errorMessage">We couldn't find your account</p>;
+          default:
+            return ''
+        }
+      }
       return wrapReactElem(<>
         <h1>Log in to your account</h1>
+        {getErrorMessage(req)}
         <form method="POST" action="/login">
           <input type="text" name="username" />
           <input type="text" name="password" />
@@ -34,12 +46,12 @@ export const routes: Routes = {
         </form>
       </>);
     },
-    POST: async (context: RouteContext) => {
-      const formData = await context.req.formData();
+    POST: async ({req, authHandler}) => {
+      const formData = await req.formData();
       const username = formData.get("username");
       const password = formData.get("password");
 
-      if (!context.authHandler) {
+      if (!authHandler) {
         return wrapReactElem(<h1>Auth handler not found</h1>);
       }
 
@@ -47,7 +59,7 @@ export const routes: Routes = {
         return redirect('/login?error=missing-fields');
       }
 
-      if (context.authHandler.createSession(username, password)) {
+      if (authHandler.createSession(username, password)) {
         hackyCurrentUser = username;
         return redirect('/account');
       }

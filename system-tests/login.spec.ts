@@ -9,7 +9,7 @@ function prepareUsernamesAndPasswords(array: { username: string, password: strin
 }
 
 describe("Login Tests", () => {
-  it.only("allowed user can log in", async () => {
+  it("allowed user can log in", async () => {
     const { baseUrl } = await startServer({
       env: {
         VOI__ALLOWED_USERS: prepareUsernamesAndPasswords([
