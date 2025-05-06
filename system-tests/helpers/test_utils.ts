@@ -105,7 +105,7 @@ export async function getBrowserPage(baseUrl: string) {
 
   addBrowserFunction("getHeading", async (level = 1) => {
     verboseLog(`getting heading`, level);
-    const heading = await page.locator(`h${level}`).textContent();
+    const heading = await page.getByRole('heading', level).textContent();
     verboseLog(`heading`, level, `is`, heading);
     return heading;
   });
@@ -132,6 +132,13 @@ export async function getBrowserPage(baseUrl: string) {
     const url = page.url().replace(baseUrl, "");
     verboseLog('current uri is', url);
     return url;
+  })
+
+  addBrowserFunction("getErrorMessage", async () => {
+    verboseLog('getting error message');
+    const message = await page.locator(".errorMessage").textContent();
+    verboseLog('got error message', message);
+    return message;
   })
 
   return { page, browserFns };
