@@ -1,13 +1,14 @@
 import React from "react";
 import { renderToString } from "react-dom/server";
-import { AuthHandler } from "../lib/AuthHandler.ts";
+import { AuthHandler, RequestContext } from "../lib/AuthHandler.ts";
 
 type RouteContext = {
   req: Request;
   authHandler: AuthHandler;
+  requestAuthContext: RequestContext;
 };
 
-type RouteHandler = (routeContext: RouteContext) => Response;
+type RouteHandler = (routeContext: RouteContext) => Response | Promise<Response>;
 
 type Routes = {
   [path: string]: {
@@ -15,7 +16,6 @@ type Routes = {
   };
 };
 
-let hackyCurrentUser: string | null = null;
 function getErrorMessage(req: Request, missingFields: string[] = []) {
   if (missingFields.length > 0) {
     return <p className="errorMessage">Please enter your {missingFields.join(' and ')}</p>;
@@ -53,14 +53,10 @@ export const routes: Routes = {
     GET: ({req}) => {
       return wrapReactElem(getLoginPage(req));
     },
-    POST: async ({req, authHandler}) => {
+    POST: async ({req, requestAuthContext}) => {
       const formData = await req.formData();
       const username = formData.get("username");
       const password = formData.get("password");
-
-      if (!authHandler) {
-        return wrapReactElem(<h1>Auth handler not found</h1>);
-      }
 
       const missingFields = []
 
@@ -80,8 +76,7 @@ export const routes: Routes = {
         throw new Error('this case should already have been dealt with!')
       }
 
-      if (await authHandler.createSession(username, password)) {
-        hackyCurrentUser = username;
+      if (await requestAuthContext.validateCredentialsAndCreateSession(username, password)) {
         return redirect('/account');
       }
 
@@ -89,15 +84,12 @@ export const routes: Routes = {
     }
   },
   '/account': {
-    GET: () => {
-      if (!hackyCurrentUser) {
+    GET: ({requestAuthContext}) => {
+      const user = requestAuthContext.getUser();
+      if (!user) {
         return redirect('/login');
       }
-      return wrapReactElem(<h1>Welcome to your account {hackyCurrentUser}!</h1>);
-    },
-    POST: () => {
-      hackyCurrentUser = null;
-      return redirect('/login');
+      return wrapReactElem(<h1>Welcome to your account {user.username}!</h1>);
     }
   }
 }

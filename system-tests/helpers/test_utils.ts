@@ -60,7 +60,7 @@ export async function getBrowserPage(baseUrl: string) {
 
   const defaultTimeout = 1000;
 
-  const browser = await chromium.launch({ headless: !showBrowser });
+  const browser = (await chromium.launch({ headless: !showBrowser }));
   const page = await browser.newPage();
 
   addCleanupTask(async () => {
@@ -151,7 +151,11 @@ export async function getBrowserPage(baseUrl: string) {
     return value;
   })
 
-  return { page, browserFns };
+  addBrowserFunction("differentUsersBrowser", async () => {
+    return getBrowserPage(baseUrl);
+  })
+
+  return { page, browserFns};
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
