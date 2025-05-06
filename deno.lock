@@ -8,6 +8,7 @@
     "jsr:@std/internal@^1.0.5": "1.0.6",
     "jsr:@std/internal@^1.0.6": "1.0.6",
     "jsr:@std/testing@*": "1.0.9",
+    "npm:playwright@*": "1.52.0",
     "npm:playwright@^1.52.0": "1.52.0"
   },
   "jsr": {
