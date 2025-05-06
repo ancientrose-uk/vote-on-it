@@ -1,12 +1,10 @@
 import React from "react";
 import { renderToString } from "react-dom/server";
 
-const report = `Env var: ${Deno.env.get('NODE_ENV')}`
-
 Deno.serve({
   port: Deno.env.get("PORT") ? Number(Deno.env.get("PORT")) : 0,
   handler: () => {
-    return new Response(renderToString(<h1>Welcome to Vote On It! {report}</h1>), {
+    return new Response(renderToString(<h1>Welcome to Vote On It!</h1>), {
       headers: {
         "Content-Type": "text/html",
       },
