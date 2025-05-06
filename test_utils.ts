@@ -55,20 +55,19 @@ export async function startServer() {
   verboseLog('Starting server on port', port);
   const server = new Deno.Command("deno", {
     args: [
-      "run",
-      "--allow-net=0.0.0.0:" + port,
-      "--allow-env=PORT",
-      // "--allow-read",
-      // "--allow-write",
+      "task",
       "start",
     ],
     env: {
       PORT: '' + port,
+      NODE_ENV: 'production'
     },
     stdout: "piped",
     stderr: "piped",
     stdin: "piped",
   });
+
+  await sleep(300)
 
   const process = server.spawn();
 
