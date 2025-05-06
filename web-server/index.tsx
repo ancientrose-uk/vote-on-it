@@ -3,6 +3,8 @@ import { renderToString } from "react-dom/server";
 
 const report = `Env var: ${Deno.env.get('NODE_ENV')}`
 
+await new Promise(resolve => setTimeout(resolve, 1000))
+
 Deno.serve({
   port: Deno.env.get("PORT") ? Number(Deno.env.get("PORT")) : 0,
   handler: () => {
@@ -12,7 +14,11 @@ Deno.serve({
       },
     });
   },
+  onListen: (addr) => {
+    console.log(`Listening on http://localhost:${addr.port}/`)
+  }
 });
+
 Deno.addSignalListener("SIGINT", () => {
   console.log("interrupted!");
   Deno.exit();
