@@ -59,7 +59,7 @@ export const routes: Routes = {
         return redirect('/login?error=missing-fields');
       }
 
-      if (authHandler.createSession(username, password)) {
+      if (await authHandler.createSession(username, password)) {
         hackyCurrentUser = username;
         return redirect('/account');
       }
