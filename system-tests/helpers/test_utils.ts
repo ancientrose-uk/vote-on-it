@@ -127,6 +127,13 @@ export async function getBrowserPage(baseUrl: string) {
     verboseLog('clicked button with text');
   })
 
+  addBrowserFunction("getCurrentUri", async () => {
+    verboseLog('getting current uri');
+    const url = page.url().replace(baseUrl, "");
+    verboseLog('current uri is', url);
+    return url;
+  })
+
   return { page, browserFns };
 }
 
