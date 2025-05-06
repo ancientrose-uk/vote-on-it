@@ -1,7 +1,7 @@
 {
   "tasks": {
     "dev": "deno run --watch main.ts",
-    "test:browser:all": "deno test --allow-all ./browser_test.ts",
+    "test:browser:all": "deno test --allow-all ./system-tests/*.spec.ts",
     "test:browser:setup": "deno run --allow-all npm:playwright install",
     "server:dev": "deno run --allow-all web-server/index.ts --watch",
     "start": "deno run --allow-env=PORT,NODE_ENV,VOI__VERBOSE --allow-net=0.0.0.0 web-server/index.tsx"

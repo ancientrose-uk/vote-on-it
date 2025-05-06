@@ -1,6 +1,6 @@
 import {expect} from "jsr:@std/expect";
 import {afterAll, describe, it} from "jsr:@std/testing/bdd";
-import { runCleanupTasks, startServer, getBrowserPage } from "./test_utils.ts";
+import { runCleanupTasks, startServer, getBrowserPage } from "./helpers/test_utils.ts";
 
 afterAll(async () => {
   await runCleanupTasks();
