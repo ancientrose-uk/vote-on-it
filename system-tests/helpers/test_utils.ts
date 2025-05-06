@@ -1,6 +1,6 @@
 import {chromium} from "playwright";
 import {EventEmitter} from "node:events";
-import {verboseLog} from "./lib/utils.ts";
+import {verboseLog} from "../../lib/utils.ts";
 
 const logStdio = Deno.env.get("VOI__LOG_STDIO") === "true"
 
