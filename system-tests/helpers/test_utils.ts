@@ -1,7 +1,7 @@
 import {chromium} from "playwright";
 import {EventEmitter} from "node:events";
 import {verboseLog} from "../../lib/utils.ts";
-import { afterAll } from "jsr:@std/testing/bdd";
+import {afterAll} from "jsr:@std/testing/bdd";
 
 const logStdio = Deno.env.get("VOI__LOG_STDIO") === "true"
 
@@ -49,6 +49,10 @@ function waitForDelayBeforeClosingBrowser() {
     }, delayBeforeClosingBrowser);
   });
   return existingDelayBeforeClosingBrowser;
+}
+
+function getSelectorForFormField(key: string) {
+  return `input[name="${key}"]`;
 }
 
 export async function getBrowserPage(baseUrl: string) {
@@ -113,9 +117,8 @@ export async function getBrowserPage(baseUrl: string) {
   addBrowserFunction("fillFormWith", async (input: Record<string,string>) => {
     verboseLog('filling form with', input);
     for (const [key, value] of Object.entries(input)) {
-      const selector = `input[name="${key}"]`;
-      await page.locator(selector).fill(value);
-      verboseLog(`filled ${selector} with ${value}`);
+      await page.locator(getSelectorForFormField(key)).fill(value);
+      verboseLog(`filled ${(getSelectorForFormField(key))} with ${value}`);
     }
     verboseLog('form filled');
   })
@@ -139,6 +142,13 @@ export async function getBrowserPage(baseUrl: string) {
     const message = await page.locator(".errorMessage").textContent();
     verboseLog('got error message', message);
     return message;
+  })
+
+  addBrowserFunction("getFieldValue", async (fieldName: string) => {
+    verboseLog('getting field value');
+    const value = await page.locator(getSelectorForFormField(fieldName)).inputValue();
+    verboseLog('got field value', value);
+    return value;
   })
 
   return { page, browserFns };

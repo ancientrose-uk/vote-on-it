@@ -16,6 +16,32 @@ type Routes = {
 };
 
 let hackyCurrentUser: string | null = null;
+function getErrorMessage(req: Request, missingFields: string[] = []) {
+  if (missingFields.length > 0) {
+    return <p className="errorMessage">Please enter your {missingFields.join(' and ')}</p>;
+  }
+  const url = new URL(req.url);
+  const error = url.searchParams.get("error");
+  console.log('error', error);
+  switch (error) {
+    case "user-not-found":
+      return <p className="errorMessage">We couldn't find your account</p>;
+    default:
+      return ''
+  }
+}
+
+function getLoginPage(req: Request, missingFields: string[] = [], prefilledUsername = '') {
+  return <>
+    <h1>Log in to your account</h1>
+    {getErrorMessage(req, missingFields)}
+    <form method="POST" action="/login">
+      <input type="text" name="username" value={prefilledUsername}/>
+      <input type="text" name="password"/>
+      <button type="submit">Log In</button>
+    </form>
+  </>;
+}
 
 export const routes: Routes = {
   '/': {
@@ -25,26 +51,7 @@ export const routes: Routes = {
   },
   '/login': {
     GET: ({req}) => {
-      function getErrorMessage(req: Request) {
-        const url = new URL(req.url);
-        const error = url.searchParams.get("error");
-        console.log('error', error);
-        switch (error) {
-          case "user-not-found":
-            return <p className="errorMessage">We couldn't find your account</p>;
-          default:
-            return ''
-        }
-      }
-      return wrapReactElem(<>
-        <h1>Log in to your account</h1>
-        {getErrorMessage(req)}
-        <form method="POST" action="/login">
-          <input type="text" name="username" />
-          <input type="text" name="password" />
-          <button type="submit">Log In</button>
-        </form>
-      </>);
+      return wrapReactElem(getLoginPage(req));
     },
     POST: async ({req, authHandler}) => {
       const formData = await req.formData();
@@ -55,8 +62,22 @@ export const routes: Routes = {
         return wrapReactElem(<h1>Auth handler not found</h1>);
       }
 
-      if (typeof username !== "string" || typeof password !== "string") {
-        return redirect('/login?error=missing-fields');
+      const missingFields = []
+
+      if (!username || typeof username !== 'string') {
+        missingFields.push('username');
+      }
+
+      if (!password || typeof password !== 'string') {
+        missingFields.push('password');
+      }
+
+      if (missingFields.length > 0) {
+        return wrapReactElem(getLoginPage(req, missingFields, typeof username === 'string' ? username : ''));
+      }
+
+      if (typeof username !== 'string' || typeof password !== 'string') {
+        throw new Error('this case should already have been dealt with!')
       }
 
       if (await authHandler.createSession(username, password)) {
