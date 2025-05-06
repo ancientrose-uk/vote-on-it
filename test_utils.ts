@@ -71,23 +71,24 @@ export async function startServer() {
     stdin: "piped",
   });
 
+  const streamPromises:Promise<void>[] = []
   const process = server.spawn();
 
   const serverFinishedPromise = process.status.then(async (status) => {
     console.log({
       status,
     });
-    if (status.success) {
-      await process.stdout.cancel();
-      await process.stderr.cancel();
-      await process.stdin.close();
-      return;
-    }
-    throw new Error("Server process exited with error");
+    await Promise.all(streamPromises);
+    await process.stdout.cancel();
+    await process.stderr.cancel();
+    await process.stdin.close();
+    if (!status.success) {
+      throw new Error("Server process exited with error");
+      }
   });
 
-  streamToEventEmitter(process.stdout, events, "stdout", serverFinishedPromise);
-  streamToEventEmitter(process.stderr, events, "stderr", serverFinishedPromise);
+  streamPromises.push(streamToEventEmitter(process.stdout, events, "stdout", serverFinishedPromise))
+  streamPromises.push(streamToEventEmitter(process.stderr, events, "stderr", serverFinishedPromise))
 
   events.on('stdout', (data) => {
     fullStdout += data
