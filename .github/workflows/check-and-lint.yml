@@ -1,4 +1,4 @@
-name: Run Browser Tests
+name: Typecheck & Lint
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
 
 jobs:
   test:
-    runs-on: win11
+    runs-on: linux
 
     steps:
       - name: Checkout code
@@ -30,5 +30,8 @@ jobs:
       - name: Run Type Check
         run: deno check
 
-#      - name: Run Lint
-#        run: deno lint
+      - name: Run Lint
+        run: deno lint
+
+      - name: Run Format check
+        run: deno fmt --check
