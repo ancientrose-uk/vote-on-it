@@ -1,14 +1,12 @@
-import { chromium } from "playwright";
-import { getAvailablePort } from "https://deno.land/x/port/mod.ts";
-import { EventEmitter } from "node:events";
+import {chromium} from "playwright";
+import {EventEmitter} from "node:events";
+import {verboseLog} from "./lib/utils.ts";
 
-const verboseLog =
-  Deno.env.get("VOI__VERBOSE") === "true" ? console.log : () => {};
+const logStdio = Deno.env.get("VOI__LOG_STDIO") === "true"
 
 setTimeout(() => {
-  console.error("Test took too long!");
-  Deno.exit(1);
-}, 10_000);
+  throw new Error("Test took too long!");
+}, 15_000);
 
 type CleanupFn = () => Promise<void>;
 
@@ -16,7 +14,7 @@ const cleanupFunctions: { priority: number; task: CleanupFn }[] = [];
 
 function addCleanupTask(task: CleanupFn, priority: number = 0) {
   cleanupFunctions.push({ task, priority });
-  cleanupFunctions.sort((a, b) => a.priority - b.priority);
+  cleanupFunctions.sort((a, b) => b.priority - a.priority);
 }
 
 export async function runCleanupTasks() {
@@ -26,20 +24,89 @@ export async function runCleanupTasks() {
   }
 }
 
-export async function getBrowserPage() {
-  const showBrowser = Deno.env.get("SHOW_BROWSER") === "true";
+function processBaseUrl(url: string) {
+  const parsedUrl = new URL(url);
+  const port = parsedUrl.port ? `:${parsedUrl.port}` : "";
+  return `${parsedUrl.protocol}//${parsedUrl.hostname}${port}`;
+}
+
+let existingDelayBeforeClosingBrowser: Promise<void> | null = null
+function waitForDelayBeforeClosingBrowser() {
+  if (existingDelayBeforeClosingBrowser) {
+    return existingDelayBeforeClosingBrowser;
+  }
   const delayBeforeClosingBrowser = Number(
-    Deno.env.get("DELAY_BEFORE_CLOSING_BROWSER") || 0
+    Deno.env.get("VOI__DELAY_BEFORE_CLOSING_BROWSER") || 0,
   );
+  existingDelayBeforeClosingBrowser = new Promise((resolve) => {
+    setTimeout(() => {
+      resolve();
+    }, delayBeforeClosingBrowser);
+  });
+  return existingDelayBeforeClosingBrowser;
+}
+
+export async function getBrowserPage(baseUrl: string) {
+  const showBrowser = Deno.env.get("VOI__SHOW_BROWSER") === "true";
+
+  const defaultTimeout = 1000;
 
   const browser = await chromium.launch({ headless: !showBrowser });
   const page = await browser.newPage();
 
   addCleanupTask(async () => {
-    await sleep(delayBeforeClosingBrowser);
+    console.log('cleaning up browser')
+    await waitForDelayBeforeClosingBrowser();
     await browser.close();
   });
-  return { page };
+
+  function raceAgainstTimeout<T>(
+    name: string,
+    task: () => Promise<T>,
+    timeout: number = defaultTimeout, // Default timeout of 5 seconds
+  ): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(new Error(`Task [${name}] timed out after [${timeout}]ms`));
+      }, timeout);
+
+      task()
+        .then((result) => {
+          clearTimeout(timer);
+          resolve(result);
+        })
+        .catch((error) => {
+          clearTimeout(timer);
+          reject(error);
+        });
+    });
+  }
+
+  const browserFns: { [name: string]: Function } = {};
+
+  function addBrowserFunction(
+    name: string,
+    fn: (...args: any[]) => Promise<any>,
+  ) {
+    browserFns[name] = (...args: any[]) =>
+      raceAgainstTimeout(name, () => fn(...args));
+  }
+
+  addBrowserFunction("visit", async (uri) => {
+    const fullUrl = baseUrl + uri;
+    verboseLog(`visiting [${uri}] ([${fullUrl}])`);
+    await page.goto(fullUrl);
+    verboseLog("successfully visited", uri);
+  });
+
+  addBrowserFunction("getHeading", async (level = 1) => {
+    verboseLog(`getting heading`, level);
+    const heading = await page.locator(`h${level}`).textContent();
+    verboseLog(`heading`, level, `is`, heading);
+    return heading;
+  });
+
+  return { page, browserFns };
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -49,28 +116,29 @@ export async function startServer() {
   const logLineToLookFor = "Listening on url: ";
 
   const events = new EventEmitter();
-  let fullStdout = ''
-  let fullStderr = ''
-  let fullStdoutAndStderr = ''
-  let processStillOpen = false
+  let fullStdout = "";
+  let fullStderr = "";
+  let fullStdoutAndStderr = "";
+  let processStillOpen = false;
 
   const server = new Deno.Command("deno", {
     args: ["task", "start"],
     env: {
       PORT: "0",
       NODE_ENV: "production",
+      VOI__VERBOSE: Deno.env.get('VOI__VERBOSE') || '',
     },
     stdout: "piped",
     stderr: "piped",
     stdin: "piped",
   });
-  const streamPromises:Promise<void>[] = []
+  const streamPromises: Promise<void>[] = [];
 
   const process = server.spawn();
-  processStillOpen = true
+  processStillOpen = true;
 
   const serverFinishedPromise = process.status.then(async (status) => {
-    processStillOpen = false
+    processStillOpen = false;
     console.log({
       status,
     });
@@ -79,46 +147,67 @@ export async function startServer() {
     await process.stderr.cancel();
     await process.stdin.close();
     if (!status.success) {
-      events.emit('SERVER_CRASHED')
-      logStdOutAndError()
+      events.emit("SERVER_CRASHED");
+      logStdOutAndError();
 
       throw new Error("Server process exited with error");
-      }
+    }
   });
 
-  streamPromises.push(streamToEventEmitter(process.stdout, events, "stdout", serverFinishedPromise))
-  streamPromises.push(streamToEventEmitter(process.stderr, events, "stderr", serverFinishedPromise))
+  streamPromises.push(
+    streamToEventEmitter(
+      process.stdout,
+      events,
+      "stdout",
+      serverFinishedPromise,
+    ),
+  );
+  streamPromises.push(
+    streamToEventEmitter(
+      process.stderr,
+      events,
+      "stderr",
+      serverFinishedPromise,
+    ),
+  );
 
-  events.on('stdout', (data) => {
-    fullStdout += data
-    fullStdoutAndStderr += data
-  })
-  events.on('stderr', (data) => {
-    fullStderr += data
-    fullStdoutAndStderr += data
-  })
-  events.on('stdout', (data) => {
-    if (data.startsWith(logLineToLookFor)) {
-      const url = data.substring(logLineToLookFor.length)
-        events.emit('SERVER_STARTED', {
-            url
-        })
+  events.on("stdout", (data) => {
+    fullStdout += data;
+    fullStdoutAndStderr += data;
+    if (logStdio) {
+      console.log(data);
     }
-  })
+  });
+  events.on("stderr", (data) => {
+    fullStderr += data;
+    fullStdoutAndStderr += data;
+    if (logStdio) {
+      console.error(data);
+    }
+  });
+  events.on("stdout", (data) => {
+    if (data.startsWith(logLineToLookFor)) {
+      const url = processBaseUrl(data.substring(logLineToLookFor.length));
+      events.emit("SERVER_STARTED", {
+        url,
+      });
+    }
+  });
 
   addCleanupTask(async () => {
+    console.log('stopping server')
     if (processStillOpen) {
       process.kill("SIGINT");
     }
     await serverFinishedPromise;
-  });
+  }, -100);
 
   const url: string = await new Promise((resolve, reject) => {
     let hasReturned = false;
     const timeout = setTimeout(() => {
       if (!hasReturned) {
         hasReturned = true;
-        logStdOutAndError()
+        logStdOutAndError();
         reject(new Error("Timed out waiting for server to start"));
       }
     }, 3000);
@@ -133,21 +222,21 @@ export async function startServer() {
       if (!hasReturned) {
         clearTimeout(timeout);
         hasReturned = true;
-        reject(new Error('Server crashed while starting'));
+        reject(new Error("Server crashed while starting"));
       }
     });
   });
 
   return {
-    baseUrl: url.substring(0, url.length - 1),
+    baseUrl: url,
   };
 
   function logStdOutAndError() {
-    console.log(' -- -- -- -- --')
-    console.log('STDOUT & STDERR from server')
-    console.log('')
-    console.log(fullStdoutAndStderr)
-    console.log(' -- -- -- -- --')
+    console.log(" -- -- -- -- --");
+    console.log("STDOUT & STDERR from server");
+    console.log("");
+    console.log(fullStdoutAndStderr);
+    console.log(" -- -- -- -- --");
   }
 }
 
@@ -155,7 +244,7 @@ async function streamToEventEmitter(
   stream: ReadableStream<Uint8Array>,
   emitter: EventEmitter,
   eventName: string,
-  stopOnPromiseResolveOrReject: Promise<void>
+  stopOnPromiseResolveOrReject: Promise<void>,
 ) {
   const reader = stream.getReader();
   const decoder = new TextDecoder();
