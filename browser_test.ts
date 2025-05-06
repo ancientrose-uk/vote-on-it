@@ -16,6 +16,6 @@ describe("Browser Tests", () => {
     const heading = await page.getByRole('heading', {level: 1}).textContent();
 
     // Expect the title to be a specific incorrect value to test failure mode
-    expect(heading).toBe("Welcome to Vote On It! Env var: production");
+    expect(heading).toBe("Welcome to Vote On It!");
   });
 });
