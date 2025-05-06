@@ -36,9 +36,15 @@ function getLoginPage(req: Request, missingFields: string[] = [], prefilledUsern
     <h1>Log in to your account</h1>
     {getErrorMessage(req, missingFields)}
     <form method="POST" action="/login">
-      <input type="text" name="username" value={prefilledUsername}/>
-      <input type="text" name="password"/>
-      <button type="submit">Log In</button>
+      <div style={{padding: '2rem'}}>
+        <label htmlFor="username" style={{display: 'block', fontSize: '1.5rem', paddingBottom: '1rem'}}>Username</label>
+        <input type="text" id="username" name="username" value={prefilledUsername}/>
+      </div>
+      <div style={{padding: '2rem'}}>
+        <label htmlFor="password" style={{display: 'block', fontSize: '1.5rem', paddingBottom: '1rem'}}>Password</label>
+        <input type="password" id="password" name="password"/>
+      </div>
+      <button type="submit" style={{zoom: 1.25}}>Log In</button>
     </form>
   </>;
 }
