@@ -52,9 +52,7 @@ function arrayBufferToString(arrayBuffer: Uint8Array<ArrayBuffer>) {
 
 export async function startServer() {
   verboseLog("Starting server...");
-  const port = await getAvailablePort();
-  verboseLog("Starting server on port", port);
-  const logLineToLookFor = "Listening on";
+  const logLineToLookFor = "Listening on url: ";
 
   const events = new EventEmitter();
   let fullStdout = ''
@@ -63,7 +61,7 @@ export async function startServer() {
   const server = new Deno.Command("deno", {
     args: ["task", "start"],
     env: {
-      PORT: "" + port,
+      PORT: "0",
       NODE_ENV: "production",
     },
     stdout: "piped",
@@ -97,9 +95,10 @@ export async function startServer() {
     fullStderr += data
   })
   events.on('stdout', (data) => {
-    if (data.includes(logLineToLookFor)) {
+    if (data.startsWith(logLineToLookFor)) {
+      const url = data.substring(logLineToLookFor.length)
         events.emit('SERVER_STARTED', {
-            url: 'THIS IS FAKE'
+            url
         })
     }
   })
@@ -109,7 +108,7 @@ export async function startServer() {
     await serverFinishedPromise;
   });
 
-  await new Promise((resolve, reject) => {
+  const url: string = await new Promise((resolve, reject) => {
     let hasReturned = false;
     const timeout = setTimeout(() => {
       if (!hasReturned) {
@@ -119,16 +118,15 @@ export async function startServer() {
     }, 3000);
     events.on("SERVER_STARTED", (info) => {
       clearTimeout(timeout);
-      console.log("port is", info.url);
       if (!hasReturned) {
         hasReturned = true;
-        resolve(info);
+        resolve(info.url);
       }
     });
   });
 
   return {
-    baseUrl: `http://localhost:${port}`,
+    baseUrl: url.substring(0, url.length - 1),
   };
 }
 
