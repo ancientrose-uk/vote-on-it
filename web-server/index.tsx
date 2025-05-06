@@ -10,14 +10,15 @@ const authHandler = new AuthHandler({
 
 Deno.serve({
   port: Deno.env.get("PORT") ? Number(Deno.env.get("PORT")) : 0,
-  handler: (req: Request) => {
+  handler: async (req: Request) => {
     const url = new URL(req.url);
     const { pathname } = url;
     const { method } = req;
     verboseLog((`Request: ${method} ${pathname}`));
     const routeHandler = lookupRoute(method, pathname);
     if (routeHandler) {
-      return routeHandler({req, authHandler});
+      const requestContext = authHandler.getRequestContext(req);
+      return requestContext.setCookieOnResponse(await routeHandler({req, authHandler, requestAuthContext: requestContext}));
     }
     return new Response(renderToString(<h1>You seem to be lost!</h1>), {
       headers: { "Content-Type": "text/html" },

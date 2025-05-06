@@ -16,13 +16,66 @@ export class AuthHandler {
     }
   }
 
-  public async createSession(username: string, password: string): Promise<string | undefined> {
+  public getRequestContext(req: Request) {
+    return new RequestContext(req, this);
+  }
+
+  public async validateCredentials(username: string, password: string): Promise<boolean> {
     const test = `${username}:${await shaEncryptPassword(password)}`;
     console.log('looking for %s in', test, this.allowedUserTokens);
     if (this.allowedUserTokens.includes(test)) {
-      return 'the-token'
+      return true
     }
 
+    return false;
+  }
+}
+
+type User = {
+  username: string;
+}
+const sessionTokenStore = new Map<string, User>();
+
+export class RequestContext {
+  public constructor(
+    public req: Request,
+    public authHandler: AuthHandler,
+  ) {}
+
+  private setCookieResponse = ''
+
+  public async validateCredentialsAndCreateSession(username:string, password:string): Promise<boolean> {
+    if (await this.authHandler.validateCredentials(username, password)) {
+      const token = crypto.randomUUID();
+      sessionTokenStore.set(token, {username});
+      this.setCookieResponse = `session=${token}; HttpOnly; Path=/; Max-Age=${24*60*60*1000}`;
+      return true;
+    }
+    return false;
+  }
+
+  public getUser(): User | undefined {
+    const cookie = this.req.headers.get("cookie");
+    if (!cookie) {
+      return undefined;
+    }
+    const match = cookie.match(/session=([^;]+)/);
+    if (match) {
+      const token = match[1];
+      const user = sessionTokenStore.get(token);
+      if (user) {
+        return user;
+      } else {
+        this.setCookieResponse = `session=; HttpOnly; Path=/; Max-Age=0`;
+      }
+    }
     return undefined;
+  }
+
+  public setCookieOnResponse(res: Response) {
+    if (this.setCookieResponse) {
+      res.headers.set("Set-Cookie", this.setCookieResponse);
+    }
+    return res;
   }
 }
