@@ -9,10 +9,10 @@ function prepareUsernamesAndPasswords(array: { username: string, password: strin
 }
 
 describe("Login Tests", () => {
-  it("user can log in", async () => {
+  it.only("allowed user can log in", async () => {
     const { baseUrl } = await startServer({
       env: {
-        ALLOWED_USERS: prepareUsernamesAndPasswords([
+        VOI__ALLOWED_USERS: prepareUsernamesAndPasswords([
           {
             username: "testuser",
             password: "testpassword",
@@ -34,7 +34,36 @@ describe("Login Tests", () => {
 
     await browserFns.clickButton('Log In');
 
+    expect(await browserFns.getCurrentUri()).toBe(`/account`);
+
     const headingAfterLogin = await browserFns.getHeading();
     expect(headingAfterLogin).toBe("Welcome to your account testuser!");
+  });
+  it("not allowed user can not log in", async () => {
+    const { baseUrl } = await startServer({
+      env: {
+        VOI__ALLOWED_USERS: prepareUsernamesAndPasswords([{
+          username: 'testuser',
+          password: 'not-test-password',
+        }]),
+      }
+    })
+    const { browserFns } = await getBrowserPage(baseUrl);
+
+    await browserFns.visit('/login');
+    const heading = await browserFns.getHeading();
+
+    expect(heading).toBe("Log in to your account");
+
+    await browserFns.fillFormWith({
+      username: 'testuser',
+      password: 'testpassword',
+    });
+
+    await browserFns.clickButton('Log In');
+
+    const headingAfterLogin = await browserFns.getHeading();
+    expect(headingAfterLogin).toBe("Log in to your account");
+    expect(await browserFns.getErrorMessage()).toBe("We couldn't find your account");
   });
 });

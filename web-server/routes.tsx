@@ -1,13 +1,21 @@
 import React from "react";
 import { renderToString } from "react-dom/server";
+import { AuthHandler } from "../lib/AuthHandler.ts";
 
-type RouteHandler = (req?: Request) => Response;
+type RouteContext = {
+  req: Request;
+  authHandler: AuthHandler;
+};
+
+type RouteHandler = (routeContext?: RouteContext) => Response;
 
 type Routes = {
   [path: string]: {
     [method: string]: RouteHandler;
   };
 };
+
+let hackyCurrentUser: string | null = null;
 
 export const routes: Routes = {
   '/': {
@@ -26,17 +34,37 @@ export const routes: Routes = {
         </form>
       </>);
     },
-    POST: async (req: Request) => {
-      const formData = await req.formData();
-      const username = '' + formData.get("username");
+    POST: async (context: RouteContext) => {
+      const formData = await context.req.formData();
+      const username = formData.get("username");
       const password = formData.get("password");
 
-      if (!username || !password) {
-        return wrapReactElem(<h1>Missing username or password</h1>);
-        // return redirect('/login?error=missing_fields');
+      if (!context.authHandler) {
+        return wrapReactElem(<h1>Auth handler not found</h1>);
       }
 
-      return wrapReactElem(<h1>Welcome to your account {username}!</h1>);
+      if (typeof username !== "string" || typeof password !== "string") {
+        return redirect('/login?error=missing-fields');
+      }
+
+      if (context.authHandler.createSession(username, password)) {
+        hackyCurrentUser = username;
+        return redirect('/account');
+      }
+
+      return redirect('/login?error=user-not-found');
+    }
+  },
+  '/account': {
+    GET: () => {
+      // if (!hackyCurrentUser) {
+      //   return redirect('/login');
+      // }
+      return wrapReactElem(<h1>Welcome to your account {hackyCurrentUser}!</h1>);
+    },
+    POST: () => {
+      hackyCurrentUser = null;
+      return redirect('/login');
     }
   }
 }

@@ -2,6 +2,11 @@ import React from "react";
 import { renderToString } from "react-dom/server";
 import {verboseLog} from "../lib/utils.ts";
 import {lookupRoute} from "./routes.tsx";
+import {AuthHandler} from "../lib/AuthHandler.ts";
+
+const authHandler = new AuthHandler({
+  allowedUsersFromEnvVars: Deno.env.get('VOI__ALLOWED_USERS'),
+})
 
 Deno.serve({
   port: Deno.env.get("PORT") ? Number(Deno.env.get("PORT")) : 0,
@@ -12,7 +17,7 @@ Deno.serve({
     verboseLog((`Request: ${method} ${pathname}`));
     const routeHandler = lookupRoute(method, pathname);
     if (routeHandler) {
-      return routeHandler(req);
+      return routeHandler({req, authHandler});
     }
     return new Response(renderToString(<h1>You seem to be lost!</h1>), {
       headers: { "Content-Type": "text/html" },
