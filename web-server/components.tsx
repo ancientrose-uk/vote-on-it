@@ -5,13 +5,12 @@ export function HomePage() {
 
   return (
     <div>
-      <h1 className="bg-purple-900">Welcome to Vote On It!</h1>
-      <div style={{ marginTop: "2rem" }}>
+      <h1>Welcome to Vote On It!</h1>
+      <div>
         <p>Hydration test: {count}</p>
         <button
           type="button"
           onClick={() => setCount((c) => c + 1)}
-          className="bg-cyan-500 shadow-lg shadow-cyan-500/50"
         >
           Click me to test hydration
         </button>
@@ -30,15 +29,9 @@ export function LoginPage(
       <h1>Log in to your account</h1>
       {error && <p className="errorMessage">{error}</p>}
       <form method="POST" action="/login">
-        <div style={{ padding: "2rem" }}>
+        <div>
           <label
-            htmlFor="username"
-            style={{
-              display: "block",
-              fontSize: "1.5rem",
-              paddingBottom: "1rem",
-            }}
-          >
+            htmlFor="username">
             Username
           </label>
           {prefilledUsername
@@ -58,20 +51,14 @@ export function LoginPage(
               />
             )}
         </div>
-        <div style={{ padding: "2rem" }}>
+        <div>
           <label
-            htmlFor="password"
-            style={{
-              display: "block",
-              fontSize: "1.5rem",
-              paddingBottom: "1rem",
-            }}
-          >
+            htmlFor="password">
             Password
           </label>
           <input type="password" id="password" name="password" />
         </div>
-        <button type="submit" style={{ zoom: 1.25 }}>Log In</button>
+        <button type="submit">Log In</button>
       </form>
     </>
   );
