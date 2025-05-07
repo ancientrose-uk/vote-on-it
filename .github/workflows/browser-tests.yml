@@ -35,3 +35,10 @@ jobs:
         env:
           VOI__VERBOSE: true
           VOI__LOG_STDIO: true
+
+      - name: Run Browser Tests (no-js)
+        run: deno task test:browser:all:no-js
+        env:
+          VOI__JS_DISABLED_IN_TESTS: true
+          VOI__VERBOSE: true
+          VOI__LOG_STDIO: true
