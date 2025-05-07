@@ -61,11 +61,13 @@ const routes: Routes = {
       }
 
       if (missingFields.length > 0) {
+        const state = {
+          error: getErrorMessage(req, missingFields),
+          prefilledUsername: typeof username === "string" ? username : "",
+        };
         return wrapReactElem(
-          LoginPage({
-            error: getErrorMessage(req, missingFields),
-            prefilledUsername: typeof username === "string" ? username : "",
-          }),
+          LoginPage(state),
+          state,
         );
       }
 
@@ -91,7 +93,8 @@ const routes: Routes = {
       if (!user) {
         return redirect("/login");
       }
-      return wrapReactElem(AccountPage({ username: user.username }));
+      const state = { username: user.username };
+      return wrapReactElem(AccountPage(state), state);
     },
   },
 };

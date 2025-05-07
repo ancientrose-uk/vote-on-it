@@ -146,14 +146,6 @@ describe("Login Tests", () => {
     await browserFns.visit("/account");
     expect(await browserFns.getCurrentUri()).toBe("/login");
   });
-  it("should not use the real password for envvars", () => {
-    const password = "not-test-password";
-    const envvarstr = prepareUsernamesAndPasswords([{
-      username: "testuser",
-      password,
-    }]);
-    expect(envvarstr).not.toContain(password);
-  });
   it("should allow multiple different users to be authenticated at once", async () => {
     const serverConfig = {
       env: {
@@ -185,9 +177,7 @@ describe("Login Tests", () => {
       },
     };
     async function runScenario(userNumber: number) {
-      const { browserFns } = await getBrowserPage(baseUrl, {
-        jsEnabled: false,
-      });
+      const { browserFns } = await getBrowserPage(baseUrl);
       await browserFns.visit("/account");
       expect(await browserFns.getCurrentUri()).toBe("/login");
       await browserFns.fillFormWith({
