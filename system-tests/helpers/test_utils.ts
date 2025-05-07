@@ -5,6 +5,8 @@ import { afterAll } from "jsr:@std/testing/bdd";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 
+const document = {querySelector: (selector: string) => ({selector})}
+
 const logStdio = Deno.env.get("VOI__LOG_STDIO") === "true";
 
 afterAll(async () => {
@@ -124,6 +126,14 @@ export async function getBrowserPage(
     verboseLog(`visiting [${uri}] ([${fullUrl}])`);
     await page.goto(fullUrl);
     verboseLog("successfully visited", uri);
+    if (jsEnabled) {
+      verboseLog("JS Enabled, therefore waiting for react to kick in (using h1 to detect)");
+      await page.waitForFunction(() => {
+        return Object.keys(document.querySelector('h1') || {}).some((x) =>
+          x.toLowerCase().includes('react'))
+      }, {timeout: defaultTimeout/2});
+      verboseLog("React kicked in");
+    }
   });
 
   addBrowserFunction("getHeading", async (level = 1) => {

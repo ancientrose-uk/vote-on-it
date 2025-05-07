@@ -19,6 +19,7 @@
         "build"
       ]
     },
+    "test:browser:all:verbose": "VOI__VERBOSE=true deno task test:browser:all",
     "test:browser:setup": {
       "command": "deno run --allow-all npm:playwright install",
       "dependencies": [
