@@ -1,7 +1,12 @@
 import React from "react";
 import { renderToString } from "react-dom/server";
 import { AuthHandler, RequestContext } from "../lib/AuthHandler.ts";
-import { AccountPage, HomePage, LoginPage } from "./components.tsx";
+import {
+  AccountPage,
+  HomePage,
+  LoginPage,
+  NotFoundPage,
+} from "./components.tsx";
 
 type RouteContext = {
   req: Request;
@@ -108,7 +113,7 @@ export const clientRoutes = Object.keys(routes).reduce((acc, path) => {
 console.log("clientRoutes", clientRoutes);
 
 export const defaultHandler: RouteHandler = () => {
-  return wrapReactElem(<h1>You seem to be lost!</h1>);
+  return wrapReactElem(<NotFoundPage />);
 };
 
 function wrapReactElem(

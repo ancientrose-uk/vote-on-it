@@ -84,3 +84,7 @@ export function LoginPage(
 export function AccountPage({ username }: { username: string }) {
   return <h1>Welcome to your account {username}!</h1>;
 }
+
+export function NotFoundPage() {
+  return <h1>You seem to be lost!</h1>;
+}

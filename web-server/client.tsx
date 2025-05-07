@@ -2,7 +2,12 @@
 import React from "react";
 import { hydrateRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import { AccountPage, HomePage, LoginPage } from "./components.tsx";
+import {
+  AccountPage,
+  HomePage,
+  LoginPage,
+  NotFoundPage,
+} from "./components.tsx";
 
 // deno-lint-ignore no-explicit-any
 const initialState = (window as any).__INITIAL_STATE__ || {};
@@ -21,6 +26,10 @@ const router = createBrowserRouter([
         prefilledUsername={initialState.prefilledUsername}
       />
     ),
+  },
+  {
+    path: "*",
+    element: <NotFoundPage />,
   },
 ]);
 
