@@ -1,7 +1,7 @@
 import React from "react";
 import { renderToString } from "react-dom/server";
 import { AuthHandler, RequestContext } from "../lib/AuthHandler.ts";
-import { AccountPage, LoginPage } from "./components.tsx";
+import { AccountPage, HomePage, LoginPage } from "./components.tsx";
 
 type RouteContext = {
   req: Request;
@@ -36,14 +36,15 @@ function getErrorMessage(req: Request, missingFields: string[] = []) {
 const routes: Routes = {
   "/": {
     GET: () => {
-      return wrapReactElem(<h1>Welcome to Vote On It!</h1>);
+      return wrapReactElem(<HomePage />);
     },
   },
   "/login": {
     GET: ({ req }) => {
-      return wrapReactElem(LoginPage({
+      const model = {
         error: getErrorMessage(req),
-      }));
+      };
+      return wrapReactElem(LoginPage(model), model);
     },
     POST: async ({ req, requestAuthContext }) => {
       const formData = await req.formData();
