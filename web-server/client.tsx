@@ -2,11 +2,17 @@
 import React from "react";
 import { hydrateRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import { HomePage, LoginPage } from "./components.tsx";
+import { AccountPage, HomePage, LoginPage } from "./components.tsx";
+
+// deno-lint-ignore no-explicit-any
+const initialState = (window as any).__INITIAL_STATE__ || {};
 
 const router = createBrowserRouter([
   { path: "/", element: <HomePage /> },
-  // { path: '/account', element: <AccountPage /> },
+  {
+    path: "/account",
+    element: <AccountPage username={initialState.username} />,
+  },
   { path: "/login", element: <LoginPage /> },
 ]);
 
@@ -18,4 +24,12 @@ hydrateRoot(
   <React.StrictMode>
     <RouterProvider router={router} />
   </React.StrictMode>,
+  {
+    onCaughtError: (error, errorInfo) => {
+      console.log({
+        error,
+        componentStack: errorInfo.componentStack,
+      });
+    },
+  },
 );
