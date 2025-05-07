@@ -83,7 +83,7 @@ export async function getBrowserPage(
   function raceAgainstTimeout<T>(
     name: string,
     task: () => Promise<T>,
-    timeout: number = defaultTimeout, // Default timeout of 5 seconds
+    timeout: number = defaultTimeout,
   ): Promise<T> {
     return new Promise<T>((resolve, reject) => {
       const timer = setTimeout(() => {
@@ -105,14 +105,18 @@ export async function getBrowserPage(
   // deno-lint-ignore ban-types
   const browserFns: { [name: string]: Function } = {};
 
-  function addBrowserFunction(
+  // deno-lint-ignore no-explicit-any
+  function addBrowserFunction<T extends (...args: any[]) => any>(
     name: string,
-    // deno-lint-ignore no-explicit-any
-    fn: (...args: any[]) => Promise<any>,
+    fn: T,
   ) {
-    // deno-lint-ignore no-explicit-any
-    browserFns[name] = (...args: any[]) =>
-      raceAgainstTimeout(name, () => fn(...args));
+    browserFns[name] = (
+      ...args: Parameters<T>
+    ): Promise<Awaited<ReturnType<T>>> =>
+      raceAgainstTimeout<Awaited<ReturnType<T>>>(
+        name,
+        async () => await fn(...args),
+      );
   }
 
   addBrowserFunction("visit", async (uri) => {
