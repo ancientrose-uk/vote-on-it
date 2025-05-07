@@ -5,9 +5,11 @@ import { afterAll } from "jsr:@std/testing/bdd";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 
-const document = {querySelector: (selector: string) => ({selector})}
+const document = { querySelector: (selector: string) => ({ selector }) };
 
 const logStdio = Deno.env.get("VOI__LOG_STDIO") === "true";
+const turnOffJsEverywhere =
+  Deno.env.get("VOI__JS_DISABLED_IN_TESTS") === "true";
 
 afterAll(async () => {
   await runCleanupTasks();
@@ -60,20 +62,22 @@ function getSelectorForFormField(key: string) {
 }
 
 type BrowserPageConfig = {
-  jsEnabled: boolean;
+  jsDisabled: boolean;
 };
 
 export async function getBrowserPage(
   baseUrl: string,
-  { jsEnabled = true } = {} as BrowserPageConfig,
+  { jsDisabled = false } = {} as BrowserPageConfig,
 ) {
   const showBrowser = Deno.env.get("VOI__SHOW_BROWSER") === "true";
 
   const defaultTimeout = 1000;
 
+  const javaScriptEnabled = !(turnOffJsEverywhere || jsDisabled);
+
   const browser = await chromium.launch({ headless: !showBrowser });
   const context = await browser.newContext({
-    javaScriptEnabled: jsEnabled,
+    javaScriptEnabled: javaScriptEnabled,
   });
   const page = await context.newPage();
 
@@ -126,12 +130,15 @@ export async function getBrowserPage(
     verboseLog(`visiting [${uri}] ([${fullUrl}])`);
     await page.goto(fullUrl);
     verboseLog("successfully visited", uri);
-    if (jsEnabled) {
-      verboseLog("JS Enabled, therefore waiting for react to kick in (using h1 to detect)");
+    if (javaScriptEnabled) {
+      verboseLog(
+        "JS Enabled, therefore waiting for react to kick in (using h1 to detect)",
+      );
       await page.waitForFunction(() => {
-        return Object.keys(document.querySelector('h1') || {}).some((x) =>
-          x.toLowerCase().includes('react'))
-      }, {timeout: defaultTimeout/2});
+        return Object.keys(document.querySelector("h1") || {}).some((x) =>
+          x.toLowerCase().includes("react")
+        );
+      }, { timeout: defaultTimeout / 2 });
       verboseLog("React kicked in");
     }
   });
