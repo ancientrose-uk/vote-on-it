@@ -2,7 +2,7 @@
   "tasks": {
     "build": "deno run --allow-run=npx --allow-read --allow-write --allow-env --allow-net --import-map=./import_map.json scripts/build.ts",
     "dev": {
-      "command": "deno run --watch main.ts",
+      "command": "deno run --allow-all scripts/dev-command.ts",
       "dependencies": [
         "build"
       ]
@@ -28,6 +28,12 @@
       "dependencies": [
         "build"
       ]
+    },
+    "check:all": {
+      "command": "deno lint && deno fmt --check"
+    },
+    "check:all:fix": {
+      "command": "deno lint --fix && deno fmt"
     },
     "server:dev": {
       "command": "VOI__SQLITE_LOCATION=\".persistence/db.sqlite\" VOI__ALLOWED_USERS='hello:486ea46224d1bb4fb680f34f7c9ad96a8f24ec88be73ea8e5a6c65260e9cb8a7' deno run --allow-all web-server/index.tsx --watch",
