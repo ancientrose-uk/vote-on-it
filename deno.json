@@ -30,7 +30,7 @@
       ]
     },
     "check:all": {
-      "command": "deno lint && deno fmt --check"
+      "command": "deno check && deno lint && deno fmt --check"
     },
     "check:all:fix": {
       "command": "deno lint --fix && deno fmt"
