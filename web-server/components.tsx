@@ -5,17 +5,13 @@ export function HomePage() {
 
   return (
     <div>
-      <h1>Welcome to Vote On It!</h1>
+      <h1 className="bg-purple-900">Welcome to Vote On It!</h1>
       <div style={{ marginTop: "2rem" }}>
         <p>Hydration test: {count}</p>
         <button
           type="button"
           onClick={() => setCount((c) => c + 1)}
-          style={{
-            padding: "0.5rem 1rem",
-            fontSize: "1rem",
-            cursor: "pointer",
-          }}
+          className="bg-cyan-500 shadow-lg shadow-cyan-500/50"
         >
           Click me to test hydration
         </button>

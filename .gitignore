@@ -140,3 +140,4 @@ dist
 useful-snippets.*
 .persistence
 web-server/public/client.js
+web-server/public/output.css
