@@ -126,6 +126,7 @@ function wrapReactElem(
     <html>
       <head>
         <title>Vote On It!</title>
+        <link rel="stylesheet" href="/static/output.css" />
       </head>
       <body>
         <div id="root">${html}</div>

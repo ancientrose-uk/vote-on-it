@@ -1,6 +1,6 @@
 {
   "tasks": {
-    "build": "deno run --allow-read --allow-write --allow-env --allow-net --import-map=./import_map.json build.ts",
+    "build": "deno run --allow-run=npx --allow-read --allow-write --allow-env --allow-net --import-map=./import_map.json build.ts",
     "dev": {
       "command": "deno run --watch main.ts",
       "dependencies": [
@@ -45,6 +45,7 @@
     "playwright": "npm:playwright@^1.52.0",
     "react": "npm:react@^19.1.0",
     "react-dom": "npm:react-dom@^19.1.0",
-    "react-router-dom": "npm:react-router-dom@^7.5.3"
+    "react-router-dom": "npm:react-router-dom@^7.5.3",
+    "tailwindcss": "npm:tailwindcss@^3.4.17"
   }
 }
