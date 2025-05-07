@@ -13,7 +13,15 @@ const router = createBrowserRouter([
     path: "/account",
     element: <AccountPage username={initialState.username} />,
   },
-  { path: "/login", element: <LoginPage /> },
+  {
+    path: "/login",
+    element: (
+      <LoginPage
+        error={initialState.error}
+        prefilledUsername={initialState.prefilledUsername}
+      />
+    ),
+  },
 ]);
 
 const rootElement = document.getElementById("root");
