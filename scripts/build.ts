@@ -1,14 +1,9 @@
+import { pathJoin, projectDir, publicDir, webserverDir } from "../lib/paths.ts";
+
 const starttime = Date.now();
 
 import { bundle } from "jsr:@deno/emit";
 import { execAndWaitOrThrow } from "../lib/exec.ts";
-import * as path from "jsr:@std/path";
-
-const dirname = path.dirname(new URL(import.meta.url).pathname);
-
-const projectDir = path.join(dirname, "..");
-const webserverDir = path.join(projectDir, "web-server");
-const publicDir = path.join(webserverDir, "public");
 
 await Deno.mkdir(publicDir, { recursive: true });
 
@@ -18,7 +13,7 @@ async function recursivelyGetMaxUpdatedDate(
 ): Promise<Date> {
   let maxDate = new Date(0);
   for await (const entry of Deno.readDir(dir)) {
-    const fullPath = path.join(dir, entry.name);
+    const fullPath = pathJoin(dir, entry.name);
     if (entry.isDirectory && entry.name !== ignoreDirName) {
       const date = await recursivelyGetMaxUpdatedDate(fullPath, ignoreDirName);
       if (date > maxDate) {
@@ -79,9 +74,9 @@ async function buildAndWriteClientCss() {
   await execAndWaitOrThrow("npx", [
     "tailwindcss@3",
     "-i",
-    path.join(webserverDir, "style.css"),
+    pathJoin(webserverDir, "style.css"),
     "-o",
-    path.join(publicDir, "output.css"),
+    pathJoin(publicDir, "output.css"),
   ], { cwd });
   console.log(`finished css build in [${Date.now() - start}]ms`);
 }
