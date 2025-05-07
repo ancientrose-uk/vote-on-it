@@ -30,6 +30,9 @@ jobs:
       - name: Setup required tooling for Browser Tests
         run: deno task test:browser:setup
 
+      - name: Run Unit Tests
+        run: deno task test:unit
+
       - name: Run Browser Tests
         run: deno task test:browser:all
         env:
