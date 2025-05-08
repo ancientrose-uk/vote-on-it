@@ -9,7 +9,6 @@ import {
   RoomPage,
 } from "./components.tsx";
 import { getPublicUrl } from "../lib/utils.ts";
-import EventEmitter from "node:events";
 import {
   createRoom,
   getLatestRoomNameForOwnerName,
@@ -18,8 +17,7 @@ import {
   openRoom,
   roomNameByUrlName,
 } from "../lib/database-access.ts";
-
-const roomEvents = new EventEmitter();
+import { roomEvents } from "../lib/events.ts";
 
 type RouteContext = {
   req: Request;
@@ -56,6 +54,14 @@ function getStatusMessageText(isOpen: boolean) {
   return isOpen
     ? "Voting session started."
     : "Waiting for host to start voting session.";
+}
+
+function prepareDataForEventEnqueue(
+  value: { roomName: string; statusMessage: string },
+  encoder: TextEncoder,
+) {
+  const eventData = `data: ${JSON.stringify(value)}\n\n`;
+  return encoder.encode(eventData);
 }
 
 const routes: Routes = {
@@ -168,9 +174,16 @@ const routes: Routes = {
       if (!user) {
         return redirect("/account?error=not-logged-in");
       }
+      const roomUrlName = getUrlForRoomNameAndOwner(roomName, user.username);
+      if (!roomUrlName) {
+        return redirect("/account?error=room-name-not-found");
+      }
       const result = openRoom(roomName, user.username);
       if (result) {
-        roomEvents.emit("room-opened", { roomName });
+        roomEvents.emit(`room-${roomUrlName}`, {
+          isOpen: true,
+          name: roomName,
+        });
         return redirect("/account");
       }
       return redirect("/account?error=room-name-not-found");
@@ -212,17 +225,28 @@ const routes: Routes = {
 
       const readableStreamDefaultWriter = new ReadableStream({
         start(controller) {
+          function send(
+            eventData: { roomName: string; statusMessage: string },
+          ) {
+            controller.enqueue(prepareDataForEventEnqueue(eventData, encoder));
+          }
           console.log("streaming events started");
+          roomEvents.on(
+            `room-${urlName}`,
+            (data: { roomName: string; isOpen: true }) => {
+              send({
+                roomName,
+                statusMessage: getStatusMessageText(data.isOpen),
+              });
+            },
+          );
           interval = setInterval(() => {
             const isOpen = isRoomOpenByUrlName(urlName);
-            const eventData = `data: ${
-              JSON.stringify({
-                roomName,
-                statusMessage: getStatusMessageText(!!isOpen),
-              })
-            }\n\n`;
-            controller.enqueue(encoder.encode(eventData));
-          }, 1000);
+            send({
+              roomName,
+              statusMessage: getStatusMessageText(!!isOpen),
+            });
+          }, 10_000);
         },
         cancel() {
           clearInterval(interval);

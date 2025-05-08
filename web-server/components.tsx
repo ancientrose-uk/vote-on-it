@@ -148,7 +148,6 @@ export function AccountPage(
     roomUrl?: string;
   },
 ) {
-  console.table({ username, roomUrl, roomName });
   return (
     <div className="max-w-4xl mx-auto p-8">
       <h1 className={headingClasses}>
