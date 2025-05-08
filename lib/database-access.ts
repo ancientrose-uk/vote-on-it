@@ -1,5 +1,7 @@
 import path from "node:path";
 import { Database } from "jsr:@db/sqlite";
+import { pathJoin, projectDir } from "./paths.ts";
+import { randomUUID } from "node:crypto";
 
 let db: Database | undefined;
 
@@ -32,23 +34,16 @@ function getDb() {
   return db;
 }
 
-export function ensureDbExists() {
+export async function ensureDbExists() {
   const db = getDb();
-  db.exec(`CREATE TABLE IF NOT EXISTS sessions
-           (
-               id
-               INTEGER
-               PRIMARY
-               KEY
-               AUTOINCREMENT,
-               
-               key
-               TEXT,
-               
-               username
-               TEXT
-           );
-    `);
+  const creationSql = await Deno.readTextFile(
+    pathJoin(projectDir, "lib", "db-create.sqlite.sql"),
+  );
+  creationSql.split(";").forEach((sql) => {
+    if (sql.trim().length > 0) {
+      db.prepare(sql).run();
+    }
+  });
 }
 
 export function setSession(key: string, username: string) {
@@ -76,14 +71,94 @@ export function getSession(key: string): string | null {
   return row.username;
 }
 
-// db.prepare(
-//   `
-// 	INSERT INTO people (name, age) VALUES (?, ?);
-//   `,
-// ).run("Bob", 40);
-// const rows = db.prepare("SELECT id, name, age FROM people").all();
-// console.log("People:");
-// for (const row of rows) {
-//   console.log(row);
-// }
-// db.close();
+export function createRoom(roomName: string, ownerUsername: string) {
+  const urlName = randomUUID();
+  const db = getDb();
+  db.prepare(
+    `
+    INSERT INTO rooms (name, ownerUsername, urlName, isOpen) VALUES (?, ?, ?, ?);
+    `,
+  ).run(roomName, ownerUsername, urlName, false);
+  return { urlName };
+}
+
+export function openRoom(roomName: string, ownerUsername: string) {
+  const db = getDb();
+  const result = db.prepare(
+    `
+    UPDATE rooms SET isOpen = ? WHERE name = ? AND ownerUsername = ?;
+    `,
+  ).run(true, roomName, ownerUsername);
+  return result !== 0;
+}
+
+export function roomNameByUrlName(urlName: string) {
+  const db = getDb();
+  const query = `
+  SELECT name FROM rooms WHERE urlName = ?;
+  `;
+  const row = db.prepare(query).get<{ name: string }>(urlName);
+  if (!row) {
+    return null;
+  }
+  return row.name;
+}
+export function isRoomOpenByUrlName(urlName: string) {
+  const db = getDb();
+  const row = db.prepare(
+    `
+    SELECT isOpen FROM rooms WHERE urlName = ?;
+    `,
+  ).get<{ isOpen: boolean }>(urlName);
+  if (!row) {
+    return null;
+  }
+  return row.isOpen;
+}
+
+export function isRoomOpenByNameAndOwner(
+  roomName: string,
+  ownerUsername: string,
+) {
+  const db = getDb();
+  const row = db.prepare(
+    `
+    SELECT isOpen FROM rooms WHERE name = ? AND ownerUsername = ?;
+    `,
+  ).get<{ isOpen: boolean }>(roomName, ownerUsername);
+  if (!row) {
+    return null;
+  }
+  return row.isOpen;
+}
+
+export function getLatestRoomNameForOwnerName(ownerUsername: string) {
+  const db = getDb();
+  const row = db.prepare(
+    `
+    SELECT name FROM rooms WHERE ownerUsername = ? ORDER BY createdDate DESC LIMIT 1;
+    `,
+  ).get<{ name: string }>(ownerUsername);
+  if (!row) {
+    return null;
+  }
+  return row.name;
+}
+
+export function getUrlForRoomNameAndOwner(
+  roomName: string,
+  ownerUsername: string,
+) {
+  const db = getDb();
+  const query = `
+  SELECT urlName FROM rooms WHERE name = ? AND ownerUsername = ?;
+  `;
+  const row = db.prepare(query).get<{ urlName: string }>(
+    roomName,
+    ownerUsername,
+  );
+  if (!row) {
+    return null;
+  }
+  return row.urlName;
+}

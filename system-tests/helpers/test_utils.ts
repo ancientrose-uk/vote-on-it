@@ -5,10 +5,8 @@ import { afterAll } from "jsr:@std/testing/bdd";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 
-const document = { querySelector: (selector: string) => ({ selector }) };
-
 const logStdio = Deno.env.get("VOI__LOG_STDIO") === "true";
-const turnOffJsEverywhere =
+export const turnOffJsEverywhere =
   Deno.env.get("VOI__JS_DISABLED_IN_TESTS") === "true";
 
 afterAll(async () => {
@@ -17,7 +15,7 @@ afterAll(async () => {
 
 setTimeout(() => {
   throw new Error("Test took too long!");
-}, 15_000);
+}, 15_000 + (Number(Deno.env.get("VOI__DELAY_BEFORE_CLOSING_BROWSER")) || 0));
 
 type CleanupFn = () => Promise<void>;
 
@@ -58,17 +56,29 @@ function waitForDelayBeforeClosingBrowser() {
 }
 
 function getSelectorForFormField(key: string) {
-  return `input[name="${key}"]`;
+  return `input[type="text"][name="${key}"],input[type="password"][name="${key}"]`;
 }
 
 type BrowserPageConfig = {
   jsDisabled: boolean;
 };
 
+// deno-lint-ignore ban-types
+export type BrowserFunctions = { [name: string]: Function };
+
 export async function getBrowserPage(
-  baseUrl: string,
+  baseUrlOrFullUrl: string,
   { jsDisabled = false } = {} as BrowserPageConfig,
 ) {
+  if (!baseUrlOrFullUrl.includes("://")) {
+    throw new Error(
+      "Base URL must include protocol (e.g. http:// or https://)",
+    );
+  }
+  const parsedUrl = new URL(baseUrlOrFullUrl);
+  const baseUrl = `${parsedUrl.protocol}//${parsedUrl.hostname}${
+    parsedUrl.port ? `:${parsedUrl.port}` : ""
+  }`;
   const showBrowser = Deno.env.get("VOI__SHOW_BROWSER") === "true";
 
   const defaultTimeout = 1000;
@@ -86,14 +96,21 @@ export async function getBrowserPage(
     await browser.close();
   });
 
-  function raceAgainstTimeout<T>(
+  function raceAgainstTimeout<T, U>(
     name: string,
+    args: U[],
     task: () => Promise<T>,
     timeout: number = defaultTimeout,
   ): Promise<T> {
     return new Promise<T>((resolve, reject) => {
       const timer = setTimeout(() => {
-        reject(new Error(`Task [${name}] timed out after [${timeout}]ms`));
+        reject(
+          new Error(
+            `Task [${name}] with parameters [${
+              args.join(", ")
+            }] timed out after [${timeout}]ms`,
+          ),
+        );
       }, timeout);
 
       task()
@@ -108,8 +125,7 @@ export async function getBrowserPage(
     });
   }
 
-  // deno-lint-ignore ban-types
-  const browserFns: { [name: string]: Function } = {};
+  const browserFns: BrowserFunctions = {};
 
   // deno-lint-ignore no-explicit-any
   function addBrowserFunction<T extends (...args: any[]) => any>(
@@ -119,8 +135,9 @@ export async function getBrowserPage(
     browserFns[name] = (
       ...args: Parameters<T>
     ): Promise<Awaited<ReturnType<T>>> =>
-      raceAgainstTimeout<Awaited<ReturnType<T>>>(
+      raceAgainstTimeout<Awaited<ReturnType<T>>, Parameters<T>>(
         name,
+        args,
         async () => await fn(...args),
       );
   }
@@ -134,6 +151,7 @@ export async function getBrowserPage(
       verboseLog(
         "JS Enabled, therefore waiting for react to kick in (using h1 to detect)",
       );
+      const document = { querySelector: (selector: string) => ({ selector }) };
       await page.waitForFunction(() => {
         return Object.keys(document.querySelector("h1") || {}).some((x) =>
           x.toLowerCase().includes("react")
@@ -143,18 +161,23 @@ export async function getBrowserPage(
     }
   });
 
-  addBrowserFunction("getHeading", async (level = 1) => {
+  addBrowserFunction("getHeading", async (level = 1, allow404Title = false) => {
     verboseLog(`getting heading`, level);
     const heading = await page.getByRole("heading", level).textContent();
     verboseLog(`heading`, level, `is`, heading);
+    if (level === 1 && !allow404Title && heading === "You seem to be lost!") {
+      throw new Error(`404 heading detected for URL [${page.url()}]`);
+    }
     return heading;
   });
 
   addBrowserFunction("fillFormWith", async (input: Record<string, string>) => {
     verboseLog("filling form with", input);
     for (const [key, value] of Object.entries(input)) {
-      await page.locator(getSelectorForFormField(key)).fill(value);
-      verboseLog(`filled ${(getSelectorForFormField(key))} with ${value}`);
+      const selector = getSelectorForFormField(key);
+      verboseLog(`finding field [${key}] using selector [${selector}]`);
+      await page.locator(selector).fill(value);
+      verboseLog(`filled ${selector} with ${value}`);
     }
     verboseLog("form filled");
   });
@@ -189,11 +212,69 @@ export async function getBrowserPage(
     return value;
   });
 
+  addBrowserFunction("assertCurrentUriIs", async (expectedUri: string) => {
+    const uri = await browserFns.getCurrentUri();
+    if (uri !== expectedUri) {
+      console.error(`expected uri to be [${expectedUri}], but it was [${uri}]`);
+      throw new Error("Current uri does not match expected uri");
+    }
+  });
+
+  addBrowserFunction("getUrlForNewlyCreatedRoom", async () => {
+    verboseLog("getting url for newly created room");
+    const url = await page.locator(".newlyCreatedRoomUrl").textContent();
+    if (!url?.includes("://")) {
+      throw new Error(`URL does not contain protocol [${url}]`);
+    }
+    verboseLog("got url for newly created room", url);
+    return url;
+  });
+
+  addBrowserFunction("getRoomStatusMessage", async () => {
+    verboseLog("getting room status message");
+    const roomStatusMessage = await page.locator(".roomStatusMessage")
+      .textContent();
+    verboseLog("got room status message", roomStatusMessage);
+    return roomStatusMessage;
+  });
+
+  addBrowserFunction(
+    "logInUser",
+    async (username: string, password: string) => {
+      verboseLog("logging in user");
+      await browserFns.visit("/login");
+      await browserFns.fillFormWith({
+        username,
+        password,
+      });
+      await browserFns.clickButton("Log In");
+      await browserFns.assertCurrentUriIs("/account");
+      verboseLog("logged in user");
+    },
+  );
+
   addBrowserFunction("differentUsersBrowser", () => {
+    verboseLog("creating different users browser");
     return getBrowserPage(baseUrl);
   });
 
-  return { page, browserFns };
+  addBrowserFunction("refreshPageWhenJsDisabled", async () => {
+    if (jsDisabled) {
+      verboseLog("Refreshing page because JS is disabled");
+      await page.reload();
+    }
+  });
+
+  addBrowserFunction("refresh", async () => {
+    verboseLog("Refreshing page");
+    await page.reload();
+  });
+
+  if (parsedUrl.pathname) {
+    await browserFns.visit(parsedUrl.pathname);
+  }
+
+  return { page, browserFns, jsDisabledByRunSettings: turnOffJsEverywhere };
 }
 
 type StartServerConfig = {
@@ -379,4 +460,13 @@ async function streamToEventEmitter(
 
   reader.releaseLock();
   await stream.cancel();
+}
+
+export function splitUrlIntoBaseAndPath(url: string) {
+  const parsedUrl = new URL(url);
+  const baseUrl = `${parsedUrl.protocol}//${parsedUrl.hostname}${
+    parsedUrl.port ? `:${parsedUrl.port}` : ""
+  }`;
+  const path = parsedUrl.pathname;
+  return { baseUrl, path };
 }

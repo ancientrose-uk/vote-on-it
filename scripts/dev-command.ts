@@ -3,9 +3,38 @@ import { projectDir } from "../lib/paths.ts";
 
 const ee = new EventEmitter();
 
-const port = Deno.env.get("PORT") || Deno.env.get("VOI__PORT") || 3000;
+const port = Deno.env.get("VOI__DEV__PORT") ||
+  Deno.env.get("VOI__PORT") || Deno.env.get("PORT") || "3000";
+
+const args = Deno.args;
+
+const allowedArgs = ["server", "tests", "all"];
+
+const invalidArgs = args.filter((arg) => !allowedArgs.includes(arg));
+if (invalidArgs.length > 0) {
+  console.error(
+    `Invalid argument(s) [${invalidArgs.join(", ")}]. Allowed arguments are: ${
+      allowedArgs.join(", ")
+    }`,
+  );
+  Deno.exit(1);
+}
+
+if (args.length === 0) {
+  console.error(
+    `No arguments provided. Allowed arguments are: ${allowedArgs.join(", ")}`,
+  );
+  Deno.exit(1);
+}
+
+const shouldRunTests = args.includes("tests") || args.includes("all");
+const shodulRunServer = args.includes("server") || args.includes("all");
+
 const shouldFixFormatting =
   Deno.env.get("VOI__DEV__AUTO_FIX_FORMATTING") === "true";
+
+const priorityTestTask = Deno.env.get("VOI__DEV__PRIORITY_TEST_TASK");
+const priorityCheckTask = Deno.env.get("VOI__DEV__PRIORITISE_TYPE_CHECKING");
 
 const assumedServerUrl = `http://localhost:${port}`;
 
@@ -28,7 +57,11 @@ ee.on("change", async () => {
 });
 
 Deno.addSignalListener("SIGINT", async () => {
-  console.log("SIGINT received, stopping all processes");
+  try {
+    console.log("SIGINT received, stopping all processes");
+  } catch (_) {
+    // ignore error
+  }
   await stopExistingProcesses();
   Deno.exit(0);
 });
@@ -60,13 +93,19 @@ async function startTheWholeChain() {
     "test:browser:all:no-js",
     "check:all",
   ];
+  if (priorityTestTask) {
+    testCommandsToRun.unshift(priorityTestTask);
+  }
   if (shouldFixFormatting) {
     testCommandsToRun.unshift("check:all:fix");
   }
+  if (priorityCheckTask) {
+    testCommandsToRun.unshift("check:types");
+  }
   const serverToRun = ["server:dev"];
   await Promise.all([
-    runCommandSequence(testCommandsToRun),
-    runCommandSequence(serverToRun),
+    shouldRunTests ? runCommandSequence(testCommandsToRun) : [],
+    shodulRunServer ? runCommandSequence(serverToRun) : [],
   ]);
 }
 
@@ -75,6 +114,7 @@ async function runCommandSequence(commands: string[]) {
   ee.on("change", () => {
     changeOccurredWhileRunning = true;
   });
+  const start = Date.now();
   while (commands.length > 0) {
     const command = commands.shift();
     if (!command) {
@@ -84,17 +124,41 @@ async function runCommandSequence(commands: string[]) {
     processes.push(handler);
     const { shouldRunNext } = await handler.finished;
     removeProcess(handler);
-    console.log(`Server should be running on`, assumedServerUrl);
     if (!shouldRunNext || changeOccurredWhileRunning) {
+      if (!shouldRunNext) {
+        console.log(`Chain broken by command: [${command}]`);
+      }
+      console.log(`Server should be running on (a)`, assumedServerUrl);
       return;
     }
+    console.log(`Server should be running on (b)`, assumedServerUrl);
   }
+  console.log(`Finished running all commands in [${Date.now() - start}]ms`);
+}
+
+function getEnvToPassThrough(command: string) {
+  const allEnvVars = Deno.env.toObject();
+  const result = Object.entries(allEnvVars).reduce((acc, [key, value]) => {
+    if (["VOI__DEV__PORT", "VOI__PORT", "PORT"].includes(key)) {
+      if (command === "server:dev") {
+        acc["PORT"] = port;
+      }
+    } else {
+      acc[key] = value;
+    }
+    return acc;
+  }, {} as Record<string, string>);
+  console.log(
+    `passing env vars (${result.PORT}), (${result.VOI__PORT}), (${result.VOI__DEV__PORT})`,
+  );
+  return result;
 }
 
 function runDenoCommand(command: string) {
   console.log("running deno command", command);
   let manuallyStopped = false;
   const cmd = new Deno.Command("deno", {
+    env: getEnvToPassThrough(command),
     args: ["task", command],
     stdout: "inherit",
     stderr: "inherit",
