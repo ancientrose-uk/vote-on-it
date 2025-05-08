@@ -92,12 +92,12 @@ export function LoginPage(
 }
 
 function getLatestRoomDisplay(
-  { latestRoomUrl, latestRoomName }: {
-    latestRoomUrl?: string;
-    latestRoomName?: string;
+  { roomUrl, roomName }: {
+    roomUrl?: string;
+    roomName?: string;
   },
 ) {
-  if (!latestRoomUrl) {
+  if (!roomUrl || !roomName) {
     return null;
   }
   return (
@@ -107,15 +107,15 @@ function getLatestRoomDisplay(
       </p>
       <div className="text-gray-600">
         <span className="newlyCreatedRoomUrl">
-          {latestRoomUrl}
+          {roomUrl}
         </span>
         <form action="/open-room" method="post">
           <input
             type="hidden"
             name="roomName"
-            value={latestRoomName}
+            value={roomName}
           />
-          <button type="submit">Start Voting Session {latestRoomName}</button>
+          <button type="submit">Start Voting Session {roomName}</button>
         </form>
       </div>
     </div>
@@ -123,12 +123,13 @@ function getLatestRoomDisplay(
 }
 
 export function AccountPage(
-  { username, latestRoomUrl, latestRoomName }: {
+  { username, roomName, roomUrl }: {
     username: string;
-    latestRoomUrl?: string;
-    latestRoomName?: string;
+    roomName?: string;
+    roomUrl?: string;
   },
 ) {
+  console.table({ username, roomUrl, roomName });
   return (
     <div className="max-w-4xl mx-auto p-8">
       <h1 className="text-4xl font-bold text-gray-800">
@@ -160,14 +161,15 @@ export function AccountPage(
           Create Room
         </button>
       </form>
-      {getLatestRoomDisplay({ latestRoomUrl, latestRoomName })}
+      {getLatestRoomDisplay({ roomName, roomUrl })}
     </div>
   );
 }
 
 export function RoomPage(
-  { roomName, isClientSide, statusMessage }: {
+  { roomName, roomUrlName, isClientSide, statusMessage }: {
     roomName: string;
+    roomUrlName: string;
     isClientSide?: boolean;
     statusMessage?: string;
   },
@@ -180,11 +182,17 @@ export function RoomPage(
     : [initialRoomStatusMessage, () => {}];
   if (isClientSide === true) {
     useEffect(() => {
-      console.log("effect used");
-      setInterval(() => {
-        setRoomStatusMessage("Voting session started.");
-        console.log("effect used again");
-      }, 1000);
+      const eventSource = new EventSource(
+        `/api/room/${encodeURIComponent(roomUrlName)}/events`,
+      );
+      eventSource.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        console.log("data", data);
+        setRoomStatusMessage(data.statusMessage);
+      };
+      return () => {
+        eventSource.close();
+      };
     }, []);
   }
   return (

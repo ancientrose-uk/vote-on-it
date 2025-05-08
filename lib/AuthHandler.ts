@@ -1,7 +1,7 @@
 import { shaEncryptPassword } from "../system-tests/helpers/encryption.ts";
 import { ensureDbExists, getSession, setSession } from "./database-access.ts";
 
-ensureDbExists();
+await ensureDbExists();
 
 interface AuthHandlerConfig {
   allowedUsersFromEnvVars?: string;

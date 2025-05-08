@@ -12,7 +12,7 @@ function replacePasswordWithKnownShaValue(password: string) {
       return "5906ac361a137e2d286465cd6588ebb5ac3f5ae955001100bc41577c3d751764";
   }
   throw new Error(
-    `Could not find known sha value for password: [${password}], for the tests we only use known sha values.  You can generate these values using [./scripts/envrypt.ts ${password}]`,
+    `Could not find known sha value for password: [${password}], for the tests we only use known sha values.  You can generate these values using [./scripts/encrypt.ts ${password}]`,
   );
 }
 

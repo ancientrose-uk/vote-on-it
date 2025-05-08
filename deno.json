@@ -50,7 +50,7 @@
         "build"
       ]
     },
-    "start": "deno run --allow-env=PORT,VOI__PORT,VOI__CANONICAL_BASE_URL,NODE_ENV,VOI__VERBOSE,VOI__ALLOWED_USERS,VOI__SQLITE_LOCATION,DENO_SQLITE_PATH,DENO_SQLITE_LOCAL,DENO_DIR,XDG_CACHE_HOME,HOME --allow-read=web-server/public,.persistence,$HOME/.cache --allow-write=.persistence --allow-ffi --allow-net=0.0.0.0 web-server/index.tsx"
+    "start": "deno run --allow-env=PORT,VOI__PORT,VOI__CANONICAL_BASE_URL,NODE_ENV,VOI__VERBOSE,VOI__ALLOWED_USERS,VOI__SQLITE_LOCATION,DENO_SQLITE_PATH,DENO_SQLITE_LOCAL,DENO_DIR,XDG_CACHE_HOME,HOME --allow-read=lib/db-create.sqlite.sql,web-server/public,.persistence,$HOME/.cache --allow-write=.persistence --allow-ffi --allow-net=0.0.0.0 web-server/index.tsx"
   },
   "imports": {
     "@db/sqlite": "jsr:@db/sqlite@^0.12.0",

@@ -29,14 +29,15 @@ try {
         return serveFile(req, staticFilePath);
       }
       verboseLog(`Request: ${method} ${pathname}`);
-      const routeHandler = lookupRoute(method, pathname);
+      const foundRoute = lookupRoute(method, pathname);
       const requestContext = authHandler.getRequestContext(req);
-      if (routeHandler) {
+      if (foundRoute) {
         return requestContext.setCookieOnResponse(
-          await routeHandler({
+          await foundRoute.handler({
             req,
             authHandler,
             requestAuthContext: requestContext,
+            urlParams: foundRoute.params,
           }),
         );
       }
@@ -44,6 +45,7 @@ try {
         req,
         authHandler,
         requestAuthContext: requestContext,
+        urlParams: {},
       });
     },
     onListen: (addr) => {

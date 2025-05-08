@@ -20,8 +20,8 @@ const router = createBrowserRouter([
     element: (
       <AccountPage
         username={initialState.username}
-        latestRoomUrl={initialState.latestRoomUrl}
-        latestRoomName={initialState.latestRoomName}
+        roomName={initialState.roomName}
+        roomUrl={initialState.roomUrl}
       />
     ),
   },
@@ -35,12 +35,13 @@ const router = createBrowserRouter([
     ),
   },
   {
-    path: "/room/12345",
+    path: "/room/:urlName",
     element: (
       <RoomPage
         roomName={initialState.roomName}
         isClientSide
         statusMessage={initialState.statusMessage}
+        roomUrlName={initialState.roomUrlName}
       />
     ),
   },
