@@ -1,22 +1,27 @@
 import React, { useEffect } from "react";
 
 export function HomePage() {
-  const [count, setCount] = React.useState(0);
-
   return (
     <div className="max-w-4xl mx-auto p-8">
       <h1 className="text-4xl font-bold mb-8 text-gray-800">
         Welcome to Vote On It!
       </h1>
       <div className="bg-white p-6 rounded-lg shadow-lg">
-        <p className="text-lg text-gray-700 mb-4">Hydration test: {count}</p>
-        <button
-          type="button"
-          onClick={() => setCount((c) => c + 1)}
-          className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-md transition-colors"
-        >
-          Click me to test hydration
-        </button>
+        <p className="text-lg text-gray-700 mb-4">
+          If you're supposed to be using this site you will have been provided
+          with the correct link. Please follow that link.
+        </p>
+        <p className="text-lg text-gray-700 mb-4">
+          If you're just curious about the project it's open source and you can
+          {" "}
+          <a
+            className="text-blue-500 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500"
+            href="https://github.com/ancientrose-uk/vote-on-it"
+            target="_blank"
+          >
+            find out more on the GitHub page
+          </a>.
+        </p>
       </div>
     </div>
   );
