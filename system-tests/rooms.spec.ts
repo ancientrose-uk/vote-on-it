@@ -1,8 +1,14 @@
-import { getBrowserPage, startServer } from "./helpers/test_utils.ts";
+import {
+  BrowserFunctions,
+  getBrowserPage,
+  splitUrlIntoBaseAndPath,
+  startServer,
+  turnOffJsEverywhere,
+} from "./helpers/test_utils.ts";
 import { prepareUsernamesAndPasswords } from "./helpers/password-helpers.ts";
 import { beforeEach, describe, it } from "jsr:@std/testing/bdd";
 import { expect } from "jsr:@std/expect";
-import { sleep } from "../lib/utils.ts";
+import { sleep, verboseLog } from "../lib/utils.ts";
 
 type TestScopeForThisSuite = {
   baseUrl?: string;
@@ -11,6 +17,34 @@ type TestScopeForThisSuite = {
 
 function generateUniqueTestRoomName() {
   return `testroom-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+}
+
+async function waitForRoomStatusMessageToBecome(
+  guest1Browser: BrowserFunctions,
+  votingStartedMessage: string,
+  options: { refreshEachTime?: boolean } = {},
+) {
+  let lastKnownStatusMessage = await guest1Browser.getRoomStatusMessage();
+  await waitForCondition(async () => {
+    if (options.refreshEachTime || turnOffJsEverywhere) {
+      await guest1Browser.refresh();
+    }
+    lastKnownStatusMessage = await guest1Browser.getRoomStatusMessage();
+    verboseLog(
+      `Checking room status message [${lastKnownStatusMessage}] against [${votingStartedMessage}], [${
+        lastKnownStatusMessage === votingStartedMessage
+      }]`,
+    );
+    return lastKnownStatusMessage === votingStartedMessage;
+  }, (err) => {
+    if (err) {
+      err.message = "Error in waitForRoomStatusMessageToBecome: " + err.message;
+      throw err;
+    }
+    const message =
+      `Timed out waiting for room status to become [${votingStartedMessage}], latest value was [${lastKnownStatusMessage}]`;
+    throw new Error(message);
+  });
 }
 
 describe("Login Tests", () => {
@@ -38,10 +72,9 @@ describe("Login Tests", () => {
     });
     it("logged in user can open a named room and logged out user can join it and see updates", async () => {
       const roomName = generateUniqueTestRoomName();
-      const { browserFns: hostBrowser, jsDisabledByRunSettings } =
-        await getBrowserPage(
-          testScope.baseUrl || "NO BASE URL",
-        );
+      const { browserFns: hostBrowser } = await getBrowserPage(
+        testScope.baseUrl || "NO BASE URL",
+      );
       await hostBrowser.logInUser("testuser", "testpassword");
       await hostBrowser.assertCurrentUriIs("/account");
       await hostBrowser.fillFormWith({
@@ -50,15 +83,16 @@ describe("Login Tests", () => {
       await hostBrowser.clickButton("Create Room");
       const roomUrl = await hostBrowser.getUrlForNewlyCreatedRoom();
 
-      const { browserFns: guestBrowser } = await getBrowserPage(roomUrl);
+      const { baseUrl, path } = splitUrlIntoBaseAndPath(roomUrl);
 
-      const heading = await guestBrowser.getHeading(1);
+      const { browserFns: firstGuestBrowser } = await getBrowserPage(roomUrl);
+      const { browserFns: secondGuestBrowser } = await getBrowserPage(baseUrl);
+
+      const heading = await firstGuestBrowser.getHeading(1);
 
       expect(heading).toBe(`Welcome to the room: ${roomName}`);
 
-      const roomStatusMessage = await guestBrowser.getRoomStatusMessage();
-
-      expect(roomStatusMessage).toEqual(
+      expect(await firstGuestBrowser.getRoomStatusMessage()).toEqual(
         "Waiting for host to start voting session.",
       );
 
@@ -66,23 +100,18 @@ describe("Login Tests", () => {
 
       const votingStartedMessage = "Voting session started.";
 
-      if (jsDisabledByRunSettings) {
-        return;
-      }
-      guestBrowser.refreshPageWhenJsDisabled();
+      secondGuestBrowser.visit(path);
 
-      let lastKnownStatusMessage = roomStatusMessage;
-      await waitForCondition(async () => {
-        lastKnownStatusMessage = await guestBrowser.getRoomStatusMessage();
-        return lastKnownStatusMessage === votingStartedMessage;
-      }, (err) => {
-        const message =
-          `Timed out waiting for room status to become [${votingStartedMessage}], latest value was [${lastKnownStatusMessage}]`;
-        if (err) {
-          throw new Error(message, err);
-        }
-        throw new Error(message);
-      });
+      await waitForRoomStatusMessageToBecome(
+        secondGuestBrowser,
+        votingStartedMessage,
+        { refreshEachTime: true },
+      );
+
+      await waitForRoomStatusMessageToBecome(
+        firstGuestBrowser,
+        votingStartedMessage,
+      );
     });
   });
   it("should prioritise canonical URLs for room URLs", async () => {
@@ -127,6 +156,7 @@ async function waitForCondition(
       }
       lastError = null;
     } catch (e) {
+      verboseLog(`Error while checking condition:`, e);
       lastError = e as Error;
     }
     await sleep(interval);

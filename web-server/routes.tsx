@@ -52,6 +52,11 @@ function getErrorMessage(req: Request, missingFields: string[] = []) {
 }
 
 let lastCreatedRoomName = "(no room created)";
+let hasARoomEverBeenOpenedForVoting = false;
+
+roomEvents.on("room-opened", () => {
+  hasARoomEverBeenOpenedForVoting = true;
+});
 
 const routes: Routes = {
   "/": {
@@ -148,7 +153,9 @@ const routes: Routes = {
     GET: () => {
       const state = {
         roomName: lastCreatedRoomName,
-        statusMessage: "Waiting for host to start voting session.",
+        statusMessage: hasARoomEverBeenOpenedForVoting
+          ? "Voting session started."
+          : "Waiting for host to start voting session.",
       };
       return wrapReactElem(RoomPage(state), state);
     },

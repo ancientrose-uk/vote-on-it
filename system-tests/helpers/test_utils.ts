@@ -6,7 +6,7 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 
 const logStdio = Deno.env.get("VOI__LOG_STDIO") === "true";
-const turnOffJsEverywhere =
+export const turnOffJsEverywhere =
   Deno.env.get("VOI__JS_DISABLED_IN_TESTS") === "true";
 
 afterAll(async () => {
@@ -62,6 +62,9 @@ function getSelectorForFormField(key: string) {
 type BrowserPageConfig = {
   jsDisabled: boolean;
 };
+
+// deno-lint-ignore ban-types
+export type BrowserFunctions = { [name: string]: Function };
 
 export async function getBrowserPage(
   baseUrlOrFullUrl: string,
@@ -122,8 +125,7 @@ export async function getBrowserPage(
     });
   }
 
-  // deno-lint-ignore ban-types
-  const browserFns: { [name: string]: Function } = {};
+  const browserFns: BrowserFunctions = {};
 
   // deno-lint-ignore no-explicit-any
   function addBrowserFunction<T extends (...args: any[]) => any>(
@@ -261,6 +263,11 @@ export async function getBrowserPage(
       verboseLog("Refreshing page because JS is disabled");
       await page.reload();
     }
+  });
+
+  addBrowserFunction("refresh", async () => {
+    verboseLog("Refreshing page");
+    await page.reload();
   });
 
   if (parsedUrl.pathname) {
@@ -453,4 +460,13 @@ async function streamToEventEmitter(
 
   reader.releaseLock();
   await stream.cancel();
+}
+
+export function splitUrlIntoBaseAndPath(url: string) {
+  const parsedUrl = new URL(url);
+  const baseUrl = `${parsedUrl.protocol}//${parsedUrl.hostname}${
+    parsedUrl.port ? `:${parsedUrl.port}` : ""
+  }`;
+  const path = parsedUrl.pathname;
+  return { baseUrl, path };
 }
