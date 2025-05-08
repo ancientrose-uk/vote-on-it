@@ -97,10 +97,6 @@ export function roomNameByUrlName(urlName: string) {
   const query = `
   SELECT name FROM rooms WHERE urlName = ?;
   `;
-  console.log({
-    query,
-    urlName,
-  });
   const row = db.prepare(query).get<{ name: string }>(urlName);
   if (!row) {
     return null;
@@ -154,15 +150,9 @@ export function getUrlForRoomNameAndOwner(
   ownerUsername: string,
 ) {
   const db = getDb();
-  console.log({});
   const query = `
   SELECT urlName FROM rooms WHERE name = ? AND ownerUsername = ?;
   `;
-  console.table({
-    query,
-    roomName,
-    ownerUsername,
-  });
   const row = db.prepare(query).get<{ urlName: string }>(
     roomName,
     ownerUsername,
@@ -172,15 +162,3 @@ export function getUrlForRoomNameAndOwner(
   }
   return row.urlName;
 }
-
-// db.prepare(
-//   `
-// 	INSERT INTO people (name, age) VALUES (?, ?);
-//   `,
-// ).run("Bob", 40);
-// const rows = db.prepare("SELECT id, name, age FROM people").all();
-// console.log("People:");
-// for (const row of rows) {
-//   console.log(row);
-// }
-// db.close();

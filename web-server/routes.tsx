@@ -169,7 +169,6 @@ const routes: Routes = {
         return redirect("/account?error=not-logged-in");
       }
       const result = openRoom(roomName, user.username);
-      console.log("open room result", result);
       if (result) {
         roomEvents.emit("room-opened", { roomName });
         return redirect("/account");
@@ -312,11 +311,6 @@ export function lookupRoute(
   const match = Object.keys(routes).map((relativeUrl) => {
     const fakeRouteUrl = `http://abc${relativeUrl}`;
     const result = new URLPattern(fakeRouteUrl).exec(fakeActualUrl);
-    console.log({
-      fakeRouteUrl,
-      fakeActualUrl,
-      result,
-    });
     if (result && routes[relativeUrl][method]) {
       return {
         handler: routes[relativeUrl][method],
@@ -325,7 +319,6 @@ export function lookupRoute(
     }
   }).filter((x) => x)[0];
 
-  console.log(match);
   if (match) {
     return match;
   }
