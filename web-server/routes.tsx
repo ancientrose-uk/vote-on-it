@@ -6,7 +6,9 @@ import {
   HomePage,
   LoginPage,
   NotFoundPage,
+  RoomPage,
 } from "./components.tsx";
+import { getPublicUrl } from "../lib/utils.ts";
 
 type RouteContext = {
   req: Request;
@@ -37,6 +39,8 @@ function getErrorMessage(req: Request, missingFields: string[] = []) {
       return "";
   }
 }
+
+let lastCreatedRoomName = "(no room created)";
 
 const routes: Routes = {
   "/": {
@@ -99,8 +103,33 @@ const routes: Routes = {
       if (!user) {
         return redirect("/login");
       }
-      const state = { username: user.username };
+      const state = {
+        username: user.username,
+        latestRoomUrl: getPublicUrl() + "/room/12345",
+      };
       return wrapReactElem(AccountPage(state), state);
+    },
+  },
+  "/create-room": {
+    POST: async ({ req }) => {
+      const formData = await req.formData();
+      const roomName = formData.get("roomName");
+      if (typeof roomName !== "string") {
+        throw new Error("roomName is not a string");
+      }
+      // if (roomName.length === 0) {
+      //   return redirect("/account?error=room-name-empty");
+      // }
+      lastCreatedRoomName = roomName;
+      return redirect("/account");
+    },
+  },
+  "/room/12345": {
+    GET: () => {
+      const state = {
+        roomName: lastCreatedRoomName,
+      };
+      return wrapReactElem(RoomPage(state), state);
     },
   },
 };

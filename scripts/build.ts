@@ -1,16 +1,27 @@
-import { pathJoin, projectDir, publicDir, webserverDir } from "../lib/paths.ts";
+import {
+  pathJoin,
+  persistenceDir,
+  projectDir,
+  publicDir,
+  webserverDir,
+} from "../lib/paths.ts";
 
 const starttime = Date.now();
 
 import { bundle } from "jsr:@deno/emit";
 import { execAndWaitOrThrow } from "../lib/exec.ts";
+import { sleep } from "../lib/utils.ts";
 
-await Deno.mkdir(publicDir, { recursive: true });
+await writeLockFile();
 
 async function recursivelyGetMaxUpdatedDate(
   dir: string,
   ignoreDirName?: string,
 ): Promise<Date> {
+  if (!await fileExists(dir)) {
+    console.log(`dir does not exist: ${dir}`);
+    return new Date(0);
+  }
   let maxDate = new Date(0);
   for await (const entry of Deno.readDir(dir)) {
     const fullPath = pathJoin(dir, entry.name);
@@ -38,12 +49,12 @@ if (
       Date.now() - starttime
     }]ms)`,
   );
+  await releaseLockFile();
   Deno.exit(0);
 }
-
 async function cleanPublicDir() {
   console.log(`cleaning public dir [${publicDir}]`);
-  await Deno.remove(publicDir, { recursive: true });
+  await Deno.remove(publicDir, { recursive: true }).catch(() => {});
   await Deno.mkdir(publicDir, { recursive: true });
 }
 
@@ -86,6 +97,48 @@ await Promise.all([
   buildAndWriteClientJs(),
   buildAndWriteClientCss(),
 ]);
+
+async function fileExists(filePath: string) {
+  try {
+    await Deno.lstat(filePath);
+  } catch (err) {
+    if (!(err instanceof Deno.errors.NotFound)) {
+      throw err;
+    }
+    return false;
+  }
+  return true;
+}
+
+async function writeLockFile() {
+  await buildLockReleased();
+  const lockFile = pathJoin(persistenceDir, ".build-lock");
+  console.log("writing build lock file", Deno.pid);
+  await Deno.mkdir(persistenceDir, { recursive: true });
+  await Deno.writeTextFile(lockFile, Date.now().toString());
+  console.log("build lock file written", Deno.pid);
+}
+
+async function releaseLockFile() {
+  const lockFile = pathJoin(persistenceDir, ".build-lock");
+  console.log("removing build lock file", Deno.pid);
+  await Deno.remove(lockFile).catch(() => {});
+}
+
+async function buildLockReleased() {
+  const lockFile = pathJoin(persistenceDir, ".build-lock");
+  while (await fileExists(lockFile)) {
+    const fileContents = Number(await Deno.readTextFile(lockFile));
+    if (fileContents > (Date.now() - 1500) && fileContents < Date.now()) {
+      await sleep(50);
+    } else {
+      console.log("build lock file is stale or broken, replace it", Deno.pid);
+      await Deno.remove(lockFile).catch(() => {});
+    }
+  }
+}
+
+await releaseLockFile();
 console.log("");
 console.log(`build completed in [${Date.now() - starttime}]ms`);
 console.log("");

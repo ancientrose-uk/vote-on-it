@@ -16,6 +16,12 @@
         "build"
       ]
     },
+    "test:browser:rooms": {
+      "command": "deno test --allow-all ./system-tests/rooms.spec.ts",
+      "dependencies": [
+        "build"
+      ]
+    },
     "test:browser:all": {
       "command": "deno test --allow-all ./system-tests/**/*.spec.ts",
       "dependencies": [
@@ -32,6 +38,9 @@
     "check:all": {
       "command": "deno check && deno lint && deno fmt --check"
     },
+    "check:types": {
+      "command": "deno check"
+    },
     "check:all:fix": {
       "command": "deno lint --fix && deno fmt"
     },
@@ -41,7 +50,7 @@
         "build"
       ]
     },
-    "start": "deno run --allow-env=PORT,NODE_ENV,VOI__VERBOSE,VOI__ALLOWED_USERS,VOI__SQLITE_LOCATION,DENO_SQLITE_PATH,DENO_SQLITE_LOCAL,DENO_DIR,XDG_CACHE_HOME,HOME --allow-read=web-server/public,.persistence,$HOME/.cache --allow-write=.persistence --allow-ffi --allow-net=0.0.0.0 web-server/index.tsx"
+    "start": "deno run --allow-env=PORT,VOI__PORT,VOI__CANONICAL_BASE_URL,NODE_ENV,VOI__VERBOSE,VOI__ALLOWED_USERS,VOI__SQLITE_LOCATION,DENO_SQLITE_PATH,DENO_SQLITE_LOCAL,DENO_DIR,XDG_CACHE_HOME,HOME --allow-read=web-server/public,.persistence,$HOME/.cache --allow-write=.persistence --allow-ffi --allow-net=0.0.0.0 web-server/index.tsx"
   },
   "imports": {
     "@db/sqlite": "jsr:@db/sqlite@^0.12.0",

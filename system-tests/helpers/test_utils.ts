@@ -5,8 +5,6 @@ import { afterAll } from "jsr:@std/testing/bdd";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 
-const document = { querySelector: (selector: string) => ({ selector }) };
-
 const logStdio = Deno.env.get("VOI__LOG_STDIO") === "true";
 const turnOffJsEverywhere =
   Deno.env.get("VOI__JS_DISABLED_IN_TESTS") === "true";
@@ -17,7 +15,7 @@ afterAll(async () => {
 
 setTimeout(() => {
   throw new Error("Test took too long!");
-}, 15_000);
+}, 15_000 + (Number(Deno.env.get("VOI__DELAY_BEFORE_CLOSING_BROWSER")) || 0));
 
 type CleanupFn = () => Promise<void>;
 
@@ -66,9 +64,18 @@ type BrowserPageConfig = {
 };
 
 export async function getBrowserPage(
-  baseUrl: string,
+  baseUrlOrFullUrl: string,
   { jsDisabled = false } = {} as BrowserPageConfig,
 ) {
+  if (!baseUrlOrFullUrl.includes("://")) {
+    throw new Error(
+      "Base URL must include protocol (e.g. http:// or https://)",
+    );
+  }
+  const parsedUrl = new URL(baseUrlOrFullUrl);
+  const baseUrl = `${parsedUrl.protocol}//${parsedUrl.hostname}${
+    parsedUrl.port ? `:${parsedUrl.port}` : ""
+  }`;
   const showBrowser = Deno.env.get("VOI__SHOW_BROWSER") === "true";
 
   const defaultTimeout = 1000;
@@ -134,6 +141,7 @@ export async function getBrowserPage(
       verboseLog(
         "JS Enabled, therefore waiting for react to kick in (using h1 to detect)",
       );
+      const document = { querySelector: (selector: string) => ({ selector }) };
       await page.waitForFunction(() => {
         return Object.keys(document.querySelector("h1") || {}).some((x) =>
           x.toLowerCase().includes("react")
@@ -153,8 +161,10 @@ export async function getBrowserPage(
   addBrowserFunction("fillFormWith", async (input: Record<string, string>) => {
     verboseLog("filling form with", input);
     for (const [key, value] of Object.entries(input)) {
-      await page.locator(getSelectorForFormField(key)).fill(value);
-      verboseLog(`filled ${(getSelectorForFormField(key))} with ${value}`);
+      const selector = getSelectorForFormField(key);
+      verboseLog(`finding field [${key}] using selector [${selector}]`);
+      await page.locator(selector).fill(value);
+      verboseLog(`filled ${selector} with ${value}`);
     }
     verboseLog("form filled");
   });
@@ -189,9 +199,58 @@ export async function getBrowserPage(
     return value;
   });
 
+  addBrowserFunction("assertCurrentUriIs", async (expectedUri: string) => {
+    const uri = await browserFns.getCurrentUri();
+    if (uri !== expectedUri) {
+      console.error(`expected uri to be [${expectedUri}], but it was [${uri}]`);
+      throw new Error("Current uri does not match expected uri");
+    }
+  });
+
+  addBrowserFunction("getUrlForNewlyCreatedRoom", async () => {
+    verboseLog("getting url for newly created room");
+    const url = await page.locator(".newlyCreatedRoomUrl").textContent();
+    if (!url?.includes("://")) {
+      throw new Error(`URL does not contain protocol [${url}]`);
+    }
+    verboseLog("got url for newly created room", url);
+    return url;
+  });
+
+  addBrowserFunction("getRoomStatusMessage", async () => {
+    verboseLog("getting room status message");
+    const roomStatusMessage = await page.locator(".roomStatusMessage")
+      .textContent();
+    verboseLog("got room status message", roomStatusMessage);
+    return roomStatusMessage;
+  });
+
+  addBrowserFunction(
+    "logInUser",
+    async (username: string, password: string) => {
+      verboseLog("logging in user");
+      await browserFns.visit("/login");
+      await browserFns.fillFormWith({
+        username,
+        password,
+      });
+      await browserFns.clickButton("Log In");
+      await browserFns.assertCurrentUriIs("/account");
+      verboseLog("logged in user");
+    },
+  );
+
   addBrowserFunction("differentUsersBrowser", () => {
     return getBrowserPage(baseUrl);
   });
+
+  addBrowserFunction("differentUsersBrowser", () => {
+    return getBrowserPage(baseUrl);
+  });
+
+  if (parsedUrl.pathname) {
+    await browserFns.visit(parsedUrl.pathname);
+  }
 
   return { page, browserFns };
 }

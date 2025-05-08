@@ -7,6 +7,7 @@ import {
   HomePage,
   LoginPage,
   NotFoundPage,
+  RoomPage,
 } from "./components.tsx";
 
 // deno-lint-ignore no-explicit-any
@@ -16,7 +17,12 @@ const router = createBrowserRouter([
   { path: "/", element: <HomePage /> },
   {
     path: "/account",
-    element: <AccountPage username={initialState.username} />,
+    element: (
+      <AccountPage
+        username={initialState.username}
+        latestRoomUrl={initialState.latestRoomUrl}
+      />
+    ),
   },
   {
     path: "/login",
@@ -26,6 +32,10 @@ const router = createBrowserRouter([
         prefilledUsername={initialState.prefilledUsername}
       />
     ),
+  },
+  {
+    path: "/room/12345",
+    element: <RoomPage roomName={initialState.roomName} />,
   },
   {
     path: "*",
