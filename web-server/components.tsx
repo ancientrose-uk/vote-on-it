@@ -1,21 +1,35 @@
 import React, { useEffect } from "react";
 
+const buttonClasses =
+  "bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-md transition-colors";
+const normalTextClasses = "text-gray-700 text-lg mb-4";
+const headingClasses = "text-3xl font-bold mb-8 text-gray-800 text-center";
+const normalFormClasses =
+  "bg-white p-6 rounded-lg shadow-lg mb-16 border-gray-300";
+const normalAreaClasses = normalFormClasses;
+const normalLinkClasses =
+  "text-blue-500 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500";
+const normalLabelClasses = "block text-gray-700 text-lg font-bold mb-2";
+const normalInputClasses =
+  "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500";
+const roomUrlClasses = `newlyCreatedRoomUrl mt-6 mb-8 ${normalTextClasses}`;
+
 export function HomePage() {
   return (
     <div className="max-w-4xl mx-auto p-8">
-      <h1 className="text-4xl font-bold mb-8 text-gray-800">
+      <h1 className={headingClasses}>
         Welcome to Vote On It!
       </h1>
       <div className="bg-white p-6 rounded-lg shadow-lg">
-        <p className="text-lg text-gray-700 mb-4">
+        <p className={normalTextClasses}>
           If you're supposed to be using this site you will have been provided
           with the correct link. Please follow that link.
         </p>
-        <p className="text-lg text-gray-700 mb-4">
+        <p className={normalTextClasses}>
           If you're just curious about the project it's open source and you can
           {" "}
           <a
-            className="text-blue-500 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={normalLinkClasses}
             href="https://github.com/ancientrose-uk/vote-on-it"
             target="_blank"
           >
@@ -32,7 +46,7 @@ export function LoginPage(
 ) {
   return (
     <div className="max-w-md mx-auto p-8">
-      <h1 className="text-3xl font-bold mb-8 text-gray-800 text-center">
+      <h1 className={headingClasses}>
         Log in to your account
       </h1>
       {error && (
@@ -43,12 +57,12 @@ export function LoginPage(
       <form
         method="POST"
         action="/login"
-        className="bg-white p-6 rounded-lg shadow-lg"
+        className={normalFormClasses}
       >
         <div className="mb-4">
           <label
             htmlFor="username"
-            className="block text-gray-700 text-sm font-bold mb-2"
+            className={normalLabelClasses}
           >
             Username
           </label>
@@ -59,7 +73,7 @@ export function LoginPage(
                 id="username"
                 name="username"
                 value={prefilledUsername}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={normalInputClasses}
               />
             )
             : (
@@ -67,14 +81,14 @@ export function LoginPage(
                 type="text"
                 id="username"
                 name="username"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={normalInputClasses}
               />
             )}
         </div>
         <div className="mb-6">
           <label
             htmlFor="password"
-            className="block text-gray-700 text-sm font-bold mb-2"
+            className={normalLabelClasses}
           >
             Password
           </label>
@@ -82,12 +96,12 @@ export function LoginPage(
             type="password"
             id="password"
             name="password"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={normalInputClasses}
           />
         </div>
         <button
           type="submit"
-          className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-md transition-colors"
+          className={buttonClasses}
         >
           Log In
         </button>
@@ -106,23 +120,23 @@ function getLatestRoomDisplay(
     return null;
   }
   return (
-    <div className="mt-8">
-      <p className="text-2xl font-bold text-gray-800 mb-4">
-        Your Latest Room
+    <div className={normalAreaClasses}>
+      <p className={normalTextClasses}>
+        This is the link to share for others to vote with you:
       </p>
-      <div className="text-gray-600">
-        <span className="newlyCreatedRoomUrl">
-          {roomUrl}
-        </span>
-        <form action="/open-room" method="post">
-          <input
-            type="hidden"
-            name="roomName"
-            value={roomName}
-          />
-          <button type="submit">Start Voting Session {roomName}</button>
-        </form>
-      </div>
+      <p className={roomUrlClasses}>
+        {roomUrl}
+      </p>
+      <form action="/open-room" method="post">
+        <input
+          type="hidden"
+          name="roomName"
+          value={roomName}
+        />
+        <button className={buttonClasses} type="submit">
+          Start Voting Session {roomName}
+        </button>
+      </form>
     </div>
   );
 }
@@ -137,18 +151,18 @@ export function AccountPage(
   console.table({ username, roomUrl, roomName });
   return (
     <div className="max-w-4xl mx-auto p-8">
-      <h1 className="text-4xl font-bold text-gray-800">
+      <h1 className={headingClasses}>
         Welcome to your account{" "}
         <span className="text-blue-600">{username}</span>!
       </h1>
-      <p className="text-gray-600 mt-4">
+      <p className={normalTextClasses}>
         This is your account page. You can create a new room here.
       </p>
-      <form action="/create-room" method="POST" className="mt-6">
+      <form action="/create-room" method="POST" className={normalFormClasses}>
         <div className="mb-4">
           <label
             htmlFor="roomName"
-            className="block text-gray-700 text-sm font-bold mb-2"
+            className={normalLabelClasses}
           >
             Room Name
           </label>
@@ -156,12 +170,12 @@ export function AccountPage(
             type="text"
             id="roomName"
             name="roomName"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={normalInputClasses}
           />
         </div>
         <button
           type="submit"
-          className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-md transition-colors"
+          className={buttonClasses}
         >
           Create Room
         </button>
@@ -202,8 +216,8 @@ export function RoomPage(
   }
   return (
     <div className="">
-      <h1>Welcome to the room: {roomName}</h1>
-      <p className="roomStatusMessage">
+      <h1 className={headingClasses}>Welcome to the room: {roomName}</h1>
+      <p className={"roomStatusMessage " + normalTextClasses}>
         {roomStatusMessage}
       </p>
     </div>
@@ -213,10 +227,10 @@ export function RoomPage(
 export function NotFoundPage() {
   return (
     <div className="max-w-4xl mx-auto p-8 text-center">
-      <h1 className="text-4xl font-bold text-gray-800 mb-4">
+      <h1 className={headingClasses}>
         You seem to be lost!
       </h1>
-      <p className="text-gray-600">
+      <p className={normalTextClasses}>
         The page you're looking for doesn't exist.
       </p>
     </div>
