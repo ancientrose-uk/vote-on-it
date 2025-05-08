@@ -57,7 +57,11 @@ ee.on("change", async () => {
 });
 
 Deno.addSignalListener("SIGINT", async () => {
-  console.log("SIGINT received, stopping all processes");
+  try {
+    console.log("SIGINT received, stopping all processes");
+  } catch (_) {
+    // ignore error
+  }
   await stopExistingProcesses();
   Deno.exit(0);
 });
@@ -110,6 +114,7 @@ async function runCommandSequence(commands: string[]) {
   ee.on("change", () => {
     changeOccurredWhileRunning = true;
   });
+  const start = Date.now();
   while (commands.length > 0) {
     const command = commands.shift();
     if (!command) {
@@ -119,11 +124,16 @@ async function runCommandSequence(commands: string[]) {
     processes.push(handler);
     const { shouldRunNext } = await handler.finished;
     removeProcess(handler);
-    console.log(`Server should be running on`, assumedServerUrl);
     if (!shouldRunNext || changeOccurredWhileRunning) {
+      if (!shouldRunNext) {
+        console.log(`Chain broken by command: [${command}]`);
+      }
+      console.log(`Server should be running on (a)`, assumedServerUrl);
       return;
     }
+    console.log(`Server should be running on (b)`, assumedServerUrl);
   }
+  console.log(`Finished running all commands in [${Date.now() - start}]ms`);
 }
 
 function getEnvToPassThrough(command: string) {

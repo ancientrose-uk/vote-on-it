@@ -56,7 +56,7 @@ function waitForDelayBeforeClosingBrowser() {
 }
 
 function getSelectorForFormField(key: string) {
-  return `input[name="${key}"]`;
+  return `input[type="text"][name="${key}"],input[type="password"][name="${key}"]`;
 }
 
 type BrowserPageConfig = {
@@ -93,14 +93,21 @@ export async function getBrowserPage(
     await browser.close();
   });
 
-  function raceAgainstTimeout<T>(
+  function raceAgainstTimeout<T, U>(
     name: string,
+    args: U[],
     task: () => Promise<T>,
     timeout: number = defaultTimeout,
   ): Promise<T> {
     return new Promise<T>((resolve, reject) => {
       const timer = setTimeout(() => {
-        reject(new Error(`Task [${name}] timed out after [${timeout}]ms`));
+        reject(
+          new Error(
+            `Task [${name}] with parameters [${
+              args.join(", ")
+            }] timed out after [${timeout}]ms`,
+          ),
+        );
       }, timeout);
 
       task()
@@ -126,8 +133,9 @@ export async function getBrowserPage(
     browserFns[name] = (
       ...args: Parameters<T>
     ): Promise<Awaited<ReturnType<T>>> =>
-      raceAgainstTimeout<Awaited<ReturnType<T>>>(
+      raceAgainstTimeout<Awaited<ReturnType<T>>, Parameters<T>>(
         name,
+        args,
         async () => await fn(...args),
       );
   }
@@ -151,10 +159,13 @@ export async function getBrowserPage(
     }
   });
 
-  addBrowserFunction("getHeading", async (level = 1) => {
+  addBrowserFunction("getHeading", async (level = 1, allow404Title = false) => {
     verboseLog(`getting heading`, level);
     const heading = await page.getByRole("heading", level).textContent();
     verboseLog(`heading`, level, `is`, heading);
+    if (level === 1 && !allow404Title && heading === "You seem to be lost!") {
+      throw new Error(`404 heading detected for URL [${page.url()}]`);
+    }
     return heading;
   });
 
@@ -241,18 +252,22 @@ export async function getBrowserPage(
   );
 
   addBrowserFunction("differentUsersBrowser", () => {
+    verboseLog("creating different users browser");
     return getBrowserPage(baseUrl);
   });
 
-  addBrowserFunction("differentUsersBrowser", () => {
-    return getBrowserPage(baseUrl);
+  addBrowserFunction("refreshPageWhenJsDisabled", async () => {
+    if (jsDisabled) {
+      verboseLog("Refreshing page because JS is disabled");
+      await page.reload();
+    }
   });
 
   if (parsedUrl.pathname) {
     await browserFns.visit(parsedUrl.pathname);
   }
 
-  return { page, browserFns };
+  return { page, browserFns, jsDisabledByRunSettings: turnOffJsEverywhere };
 }
 
 type StartServerConfig = {

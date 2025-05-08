@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 
 export function HomePage() {
   const [count, setCount] = React.useState(0);
@@ -91,7 +91,12 @@ export function LoginPage(
   );
 }
 
-function getLatestRoomDisplay(latestRoomUrl?: string) {
+function getLatestRoomDisplay(
+  { latestRoomUrl, latestRoomName }: {
+    latestRoomUrl?: string;
+    latestRoomName?: string;
+  },
+) {
   if (!latestRoomUrl) {
     return null;
   }
@@ -100,17 +105,29 @@ function getLatestRoomDisplay(latestRoomUrl?: string) {
       <p className="text-2xl font-bold text-gray-800 mb-4">
         Your Latest Room
       </p>
-      <p className="text-gray-600">
+      <div className="text-gray-600">
         <span className="newlyCreatedRoomUrl">
           {latestRoomUrl}
         </span>
-      </p>
+        <form action="/open-room" method="post">
+          <input
+            type="hidden"
+            name="roomName"
+            value={latestRoomName}
+          />
+          <button type="submit">Start Voting Session {latestRoomName}</button>
+        </form>
+      </div>
     </div>
   );
 }
 
 export function AccountPage(
-  { username, latestRoomUrl }: { username: string; latestRoomUrl?: string },
+  { username, latestRoomUrl, latestRoomName }: {
+    username: string;
+    latestRoomUrl?: string;
+    latestRoomName?: string;
+  },
 ) {
   return (
     <div className="max-w-4xl mx-auto p-8">
@@ -143,17 +160,38 @@ export function AccountPage(
           Create Room
         </button>
       </form>
-      {getLatestRoomDisplay(latestRoomUrl)}
+      {getLatestRoomDisplay({ latestRoomUrl, latestRoomName })}
     </div>
   );
 }
 
-export function RoomPage({ roomName }: { roomName: string }) {
+export function RoomPage(
+  { roomName, isClientSide, statusMessage }: {
+    roomName: string;
+    isClientSide?: boolean;
+    statusMessage?: string;
+  },
+) {
+  const initialRoomStatusMessage = statusMessage || "Waiting for update...";
+  const [roomStatusMessage, setRoomStatusMessage] = isClientSide === true
+    ? React.useState(
+      initialRoomStatusMessage,
+    )
+    : [initialRoomStatusMessage, () => {}];
+  if (isClientSide === true) {
+    useEffect(() => {
+      console.log("effect used");
+      setInterval(() => {
+        setRoomStatusMessage("Voting session started.");
+        console.log("effect used again");
+      }, 1000);
+    }, []);
+  }
   return (
     <div className="">
       <h1>Welcome to the room: {roomName}</h1>
       <p className="roomStatusMessage">
-        Waiting for host to start voting session.
+        {roomStatusMessage}
       </p>
     </div>
   );

@@ -17,7 +17,7 @@ describe("Basic Tests", () => {
     const { browserFns } = await getBrowserPage(baseUrl);
 
     await browserFns.visit("/nope");
-    const heading = await browserFns.getHeading(1);
+    const heading = await browserFns.getHeading(1, true);
 
     expect(heading).toBe("You seem to be lost!");
   });

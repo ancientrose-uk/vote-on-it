@@ -9,6 +9,17 @@ import {
   RoomPage,
 } from "./components.tsx";
 import { getPublicUrl } from "../lib/utils.ts";
+import EventEmitter from "node:events";
+
+const roomEvents = new EventEmitter();
+
+roomEvents.on("room-opened", (data) => {
+  console.log(`
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  Room opened: ${data.roomName}
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  `);
+});
 
 type RouteContext = {
   req: Request;
@@ -106,6 +117,7 @@ const routes: Routes = {
       const state = {
         username: user.username,
         latestRoomUrl: getPublicUrl() + "/room/12345",
+        latestRoomName: lastCreatedRoomName,
       };
       return wrapReactElem(AccountPage(state), state);
     },
@@ -124,10 +136,19 @@ const routes: Routes = {
       return redirect("/account");
     },
   },
+  "/open-room": {
+    POST: async ({ req }) => {
+      const formData = await req.formData();
+      const roomName = formData.get("roomName");
+      roomEvents.emit("room-opened", { roomName });
+      return redirect("/account");
+    },
+  },
   "/room/12345": {
     GET: () => {
       const state = {
         roomName: lastCreatedRoomName,
+        statusMessage: "Waiting for host to start voting session.",
       };
       return wrapReactElem(RoomPage(state), state);
     },
@@ -135,7 +156,9 @@ const routes: Routes = {
 };
 
 export const clientRoutes = Object.keys(routes).reduce((acc, path) => {
-  acc[path] = routes[path].GET;
+  if (!path.includes("/api/")) {
+    acc[path] = routes[path].GET;
+  }
   return acc;
 }, {} as { [path: string]: RouteHandler });
 
