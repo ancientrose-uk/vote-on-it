@@ -1,10 +1,7 @@
 import React from "react";
-import { renderToString } from "react-dom/server";
-import { AuthHandler, RequestContext } from "../lib/AuthHandler.ts";
 import {
   AccountPage,
   HomePage,
-  LoginPage,
   NotFoundPage,
   RoomPage,
 } from "./components.tsx";
@@ -32,25 +29,9 @@ import {
   VoterId,
 } from "../lib/events.ts";
 import { randomUUID } from "node:crypto";
-
-const serverStartTime = Date.now(); // todo, replace this with the latest build time.
-
-type RouteContext = {
-  req: Request;
-  authHandler: AuthHandler;
-  requestAuthContext: RequestContext;
-  urlParams: Record<string, string | undefined>;
-};
-
-type RouteHandler = (
-  routeContext: RouteContext,
-) => Response | Promise<Response>;
-
-type Routes = {
-  [path: string]: {
-    [method: string]: RouteHandler;
-  };
-};
+import { RouteHandler, Routes } from "../lib/types.ts";
+import { redirect, wrapReactElem } from "../routes/helpers.tsx";
+import { loginRoutes } from "../routes/login-routes.tsx";
 
 const currentVoteByRoomUrlName: Record<string, CurrentVote> = {};
 const currentStatsByRoomUrlName: Record<string, CurrentStats> = {};
@@ -79,20 +60,6 @@ function removeOneGuestFromRoom(urlName: string, voterId: VoterId) {
   emitRoomSizeChange(urlName);
 }
 
-function getErrorMessage(req: Request, missingFields: string[] = []) {
-  if (missingFields.length > 0) {
-    return `Please enter your ${missingFields.join(" and ")}`;
-  }
-  const url = new URL(req.url);
-  const error = url.searchParams.get("error");
-  switch (error) {
-    case "user-not-found":
-      return `We couldn't find your account`;
-    default:
-      return "";
-  }
-}
-
 function getStatusMessageText(isOpen: boolean, currentVote?: CurrentVote) {
   if (currentVote) {
     return `Vote requested`;
@@ -117,55 +84,7 @@ const routes: Routes = {
       return wrapReactElem(<HomePage />);
     },
   },
-  "/login": {
-    GET: ({ req }) => {
-      const model = {
-        error: getErrorMessage(req),
-      };
-      return wrapReactElem(LoginPage(model), model);
-    },
-    POST: async ({ req, requestAuthContext }) => {
-      const formData = await req.formData();
-      const username = formData.get("username");
-      const password = formData.get("password");
-
-      const missingFields: string[] = [];
-
-      if (!username || typeof username !== "string") {
-        missingFields.push("username");
-      }
-
-      if (!password || typeof password !== "string") {
-        missingFields.push("password");
-      }
-
-      if (missingFields.length > 0) {
-        const state = {
-          error: getErrorMessage(req, missingFields),
-          prefilledUsername: typeof username === "string" ? username : "",
-        };
-        return wrapReactElem(
-          LoginPage(state),
-          state,
-        );
-      }
-
-      if (typeof username !== "string" || typeof password !== "string") {
-        throw new Error("this case should already have been dealt with!");
-      }
-
-      if (
-        await requestAuthContext.validateCredentialsAndCreateSession(
-          username,
-          password,
-        )
-      ) {
-        return redirect("/account");
-      }
-
-      return redirect("/login?error=user-not-found");
-    },
-  },
+  ...loginRoutes,
   "/account": {
     GET: ({ requestAuthContext }) => {
       const user = requestAuthContext.getUser();
@@ -274,7 +193,7 @@ const routes: Routes = {
       if (!user) {
         return redirect("/account?error=not-logged-in");
       }
-      console.log({
+      console.log("opened room", {
         roomName: roomUrlName,
         user: user.username,
       });
@@ -397,7 +316,6 @@ const routes: Routes = {
         return redirect(req.url + "?error=vote-not-found");
       }
       const alreadyVoted = currentVote.alreadyVoted;
-      console.log("checking", alreadyVoted, voterId);
       if (alreadyVoted.includes(voterId)) {
         return redirect(req.url + "?error=already-voted");
       }
@@ -450,10 +368,9 @@ const routes: Routes = {
                 prepareDataForEventEnqueue(eventData, encoder),
               );
             } catch (_) {
-              console.error("failed to send event from server to client");
+              // ignore
             }
           }
-          console.log("streaming events started");
           addGuestRoomEventListener(urlName, (data: GuestRoomEventData) => {
             send(data);
           });
@@ -482,7 +399,6 @@ const routes: Routes = {
           if (!isForOwner && currentStatsByRoomUrlName[urlName]) {
             removeOneGuestFromRoom(urlName, voterId);
           }
-          console.log("streaming events cancelled");
         },
       });
 
@@ -512,47 +428,9 @@ export const clientRoutes = Object.keys(routes).reduce((acc, path) => {
   return acc;
 }, {} as { [path: string]: RouteHandler });
 
-console.log("clientRoutes", clientRoutes);
-
 export const defaultHandler: RouteHandler = () => {
   return wrapReactElem(<NotFoundPage />);
 };
-
-function wrapReactElem(
-  reactElement: React.JSX.Element,
-  initialState = {},
-): Response {
-  const html = renderToString(reactElement);
-  return new Response(
-    `<!DOCTYPE html>
-    <html>
-      <head>
-        <title>Vote On It!</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <link rel="stylesheet" href="/static/output.css?cb=${serverStartTime}" />
-      </head>
-      <body class="ml-16 mr-16">
-        <div id="root">${html}</div>
-        <script>
-          window.__INITIAL_STATE__ = ${JSON.stringify(initialState)};
-        </script>
-        <script type="module" src="/static/client.js?cb=${serverStartTime}"></script>
-      </body>
-    </html>`,
-    {
-      headers: { "Content-Type": "text/html" },
-    },
-  );
-}
-
-function redirect(url: string, status = 302): Response {
-  return new Response(renderToString(<a href={url} />), {
-    status,
-    headers: {
-      Location: url,
-    },
-  });
-}
 
 export function lookupRoute(
   method: string,
