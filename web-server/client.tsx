@@ -39,9 +39,18 @@ const router = createBrowserRouter([
     element: (
       <RoomPage
         roomName={initialState.roomName}
-        isClientSide
-        statusMessage={initialState.statusMessage}
         roomUrlName={initialState.roomUrlName}
+        fullRoomUrl={initialState.fullRoomUrl}
+        isClientSide
+        statusMessageInput={initialState.statusMessageInput}
+        userIsOwner={initialState.userIsOwner}
+        roomOpenAtLoad={initialState.roomOpenAtLoad}
+        initialCurrentVote={initialState.initialCurrentVote}
+        initialStats={initialState.initialStats}
+        initialHasAlreadyVotedInThisVote={initialState
+          .initialHasAlreadyVotedInThisVote}
+        voterId={initialState.voterId}
+        initialPreviousVoteSummary={initialState.initialPreviousVoteSummary}
       />
     ),
   },

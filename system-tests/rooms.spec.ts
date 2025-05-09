@@ -25,7 +25,7 @@ const configuredTestUsers = [
   },
 ];
 
-describe("Login Tests", () => {
+describe("Rooms", () => {
   let testScope: TestScopeForThisSuite = {};
   beforeEach(() => {
     testScope = {};
@@ -68,7 +68,13 @@ describe("Login Tests", () => {
         "Waiting for host to start voting session.",
       );
 
-      await hostBrowser.clickButton(`Start Voting Session ${roomName}`);
+      await hostBrowser.clickLink(roomUrl);
+
+      expect(await hostBrowser.getCurrentUri()).toEqual(path);
+
+      await hostBrowser.clickButton(`Start Voting Session`);
+
+      expect(await hostBrowser.getCurrentUri()).toEqual(path);
 
       const votingStartedMessage = "Voting session started.";
 
@@ -83,6 +89,180 @@ describe("Login Tests", () => {
       await waitForRoomStatusMessageToBecome(
         firstGuestBrowser,
         votingStartedMessage,
+      );
+    });
+    it("should not allow guests to start voting", async () => {
+      const roomName = generateUniqueTestRoomName();
+      const { browserFns: hostBrowser } = await getBrowserPage(
+        testScope.baseUrl || "NO BASE URL",
+      );
+      const { roomUrl } = await loginAndCreateRoom(
+        hostBrowser,
+        roomName,
+        "testuser",
+        "testpassword",
+      );
+      await hostBrowser.clickLink(roomUrl);
+      const { browserFns: guestBrowser } = await getBrowserPage(roomUrl);
+
+      expect(await hostBrowser.hasElement("button", "Start Voting Session"))
+        .toBe(true);
+      expect(await guestBrowser.hasElement("button", "Start Voting Session"))
+        .not.toBe(true);
+    });
+    it("should work for a full run-through with multiple users and multiple votes (just one room here)", async () => {
+      const roomName = generateUniqueTestRoomName();
+      const { browserFns: hostBrowser } = await getBrowserPage(
+        testScope.baseUrl || "NO BASE URL",
+      );
+      const { roomUrl } = await loginAndCreateRoom(
+        hostBrowser,
+        roomName,
+        "testuser",
+        "testpassword",
+      );
+      await hostBrowser.clickLink(roomUrl);
+      const { browserFns: firstGuestBrowser } = await getBrowserPage(roomUrl);
+      const { browserFns: secondGuestBrowser } = await getBrowserPage(roomUrl);
+      const { browserFns: thirdGuestBrowser } = await getBrowserPage(roomUrl);
+      const { browserFns: fourthGuestBrowser } = await getBrowserPage(roomUrl);
+
+      const allBrowsersPromise = Promise.all([
+        waitForRoomStatusMessageToBecome(
+          firstGuestBrowser,
+          "Question: Is the sky blue?",
+        ),
+        waitForRoomStatusMessageToBecome(
+          secondGuestBrowser,
+          "Question: Is the sky blue?",
+        ),
+        waitForRoomStatusMessageToBecome(
+          thirdGuestBrowser,
+          "Question: Is the sky blue?",
+        ),
+        waitForRoomStatusMessageToBecome(
+          fourthGuestBrowser,
+          "Question: Is the sky blue?",
+        ),
+      ]);
+
+      await hostBrowser.clickButton(`Start Voting Session`);
+
+      await hostBrowser.fillFormWith({
+        voteTitle: "Is the sky blue?",
+      });
+
+      await hostBrowser.clickButton("Request Vote");
+
+      await allBrowsersPromise;
+
+      await Promise.all([
+        firstGuestBrowser.clickButton("For"),
+        secondGuestBrowser.clickButton("Against"),
+        thirdGuestBrowser.clickButton("Abstain"),
+        fourthGuestBrowser.clickButton("For"),
+      ]);
+
+      await hostBrowser.clickButton("End vote");
+
+      await Promise.all([
+        waitForRoomStatusMessageToBecome(
+          firstGuestBrowser,
+          "Voting session started.",
+        ),
+        waitForRoomStatusMessageToBecome(
+          secondGuestBrowser,
+          "Voting session started.",
+        ),
+        waitForRoomStatusMessageToBecome(
+          thirdGuestBrowser,
+          "Voting session started.",
+        ),
+        waitForRoomStatusMessageToBecome(
+          fourthGuestBrowser,
+          "Voting session started.",
+        ),
+      ]);
+
+      const allBrowsers = [
+        hostBrowser,
+        firstGuestBrowser,
+        secondGuestBrowser,
+        thirdGuestBrowser,
+        fourthGuestBrowser,
+      ];
+
+      await Promise.all(
+        allBrowsers.map(async (browser) => {
+          expect(await browser.getVoteSummary()).toEqual({
+            "Votes for": 2,
+            "Votes against": 1,
+            Abstained: 1,
+          });
+        }),
+      );
+
+      await Promise.all(allBrowsers.map(async (browser) => {
+        const votingSummaryExists = await browser.hasElement(".voteSummary");
+        if (!votingSummaryExists) {
+          throw new Error("Voting summary not found when it should be present");
+        }
+      }));
+
+      const allBrowsersPromise2 = Promise.all([
+        waitForRoomStatusMessageToBecome(
+          firstGuestBrowser,
+          "Question: Is the sky red?",
+        ),
+        waitForRoomStatusMessageToBecome(
+          secondGuestBrowser,
+          "Question: Is the sky red?",
+        ),
+        waitForRoomStatusMessageToBecome(
+          thirdGuestBrowser,
+          "Question: Is the sky red?",
+        ),
+        waitForRoomStatusMessageToBecome(
+          fourthGuestBrowser,
+          "Question: Is the sky red?",
+        ),
+      ]);
+
+      await hostBrowser.fillFormWith({
+        voteTitle: "Is the sky red?",
+      });
+
+      await hostBrowser.clickButton("Request Vote");
+
+      await allBrowsersPromise2;
+
+      await Promise.all(allBrowsers.map(async (browser) => {
+        const votingSummaryExists = await browser.hasElement(".voteSummary");
+        if (votingSummaryExists) {
+          throw new Error("Voting summary found when it should be absent");
+        }
+      }));
+      await Promise.all(
+        [
+          firstGuestBrowser,
+          secondGuestBrowser,
+          thirdGuestBrowser,
+          fourthGuestBrowser,
+        ].map(async (browser) => {
+          await browser.clickButton("Abstain");
+        }),
+      );
+
+      await hostBrowser.clickButton("End vote");
+
+      await Promise.all(
+        allBrowsers.map(async (browser) => {
+          expect(await browser.getVoteSummary()).toEqual({
+            "Votes for": 0,
+            "Votes against": 0,
+            Abstained: 4,
+          });
+        }),
       );
     });
     it("should allow multiple hosts to create multiple rooms", async () => {
@@ -123,8 +303,9 @@ describe("Login Tests", () => {
         throw new Error("This should never be hit");
       }
 
-      firstHost.browserFns.clickButton(
-        `Start Voting Session ${firstHost.roomName}`,
+      await firstHost.browserFns.clickLink(firstHost.roomUrl);
+      await firstHost.browserFns.clickButton(
+        `Start Voting Session`,
       );
       await Promise.all(firstHost.guestBrowsers.map(async (guestBrowser) => {
         expect(await guestBrowser.browserFns.getHeading(1)).toEqual(

@@ -2,6 +2,7 @@ import path from "node:path";
 import { Database } from "jsr:@db/sqlite";
 import { pathJoin, projectDir } from "./paths.ts";
 import { randomUUID } from "node:crypto";
+import { User } from "./AuthHandler.ts";
 
 let db: Database | undefined;
 
@@ -82,13 +83,13 @@ export function createRoom(roomName: string, ownerUsername: string) {
   return { urlName };
 }
 
-export function openRoom(roomName: string, ownerUsername: string) {
+export function openRoom(roomUrlName: string, ownerUsername: string) {
   const db = getDb();
   const result = db.prepare(
     `
-    UPDATE rooms SET isOpen = ? WHERE name = ? AND ownerUsername = ?;
+    UPDATE rooms SET isOpen = ? WHERE urlName = ? AND ownerUsername = ?;
     `,
-  ).run(true, roomName, ownerUsername);
+  ).run(true, roomUrlName, ownerUsername);
   return result !== 0;
 }
 
@@ -161,4 +162,22 @@ export function getUrlForRoomNameAndOwner(
     return null;
   }
   return row.urlName;
+}
+
+export function isUserOwnerOfRoom(user: User | undefined, roomUrlName: string) {
+  if (!user) {
+    return false;
+  }
+  const db = getDb();
+  const row = db.prepare(
+    `
+    SELECT ownerUsername FROM rooms WHERE urlName = ?;
+    `,
+  ).get<{ ownerUsername: string }>(roomUrlName);
+  if (!row) {
+    console.log("No row", { roomUrlName });
+    return false;
+  }
+  console.log("Comparing", row.ownerUsername, user.username);
+  return row.ownerUsername === user.username;
 }

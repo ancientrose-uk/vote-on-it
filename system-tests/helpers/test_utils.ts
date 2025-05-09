@@ -106,9 +106,9 @@ export async function getBrowserPage(
       const timer = setTimeout(() => {
         reject(
           new Error(
-            `Task [${name}] with parameters [${
-              args.join(", ")
-            }] timed out after [${timeout}]ms`,
+            `Task [${name}] with parameters ${
+              JSON.stringify(args)
+            } timed out after [${timeout}]ms`,
           ),
         );
       }, timeout);
@@ -146,19 +146,24 @@ export async function getBrowserPage(
     const fullUrl = baseUrl + uri;
     verboseLog(`visiting [${uri}] ([${fullUrl}])`);
     await page.goto(fullUrl);
+    await browserFns.waitForReactToHydrate();
     verboseLog("successfully visited", uri);
-    if (javaScriptEnabled) {
-      verboseLog(
-        "JS Enabled, therefore waiting for react to kick in (using h1 to detect)",
-      );
-      const document = { querySelector: (selector: string) => ({ selector }) };
-      await page.waitForFunction(() => {
-        return Object.keys(document.querySelector("h1") || {}).some((x) =>
-          x.toLowerCase().includes("react")
-        );
-      }, { timeout: defaultTimeout / 2 });
-      verboseLog("React kicked in");
+  });
+
+  addBrowserFunction("waitForReactToHydrate", async () => {
+    if (!javaScriptEnabled) {
+      return;
     }
+    verboseLog(
+      "JS Enabled, therefore waiting for react to kick in (using h1 to detect)",
+    );
+    const document = { querySelector: (selector: string) => ({ selector }) };
+    await page.waitForFunction(() => {
+      return Object.keys(document.querySelector("h1") || {}).some((x) =>
+        x.toLowerCase().includes("react")
+      );
+    }, { timeout: defaultTimeout / 2 });
+    verboseLog("React kicked in");
   });
 
   addBrowserFunction("getHeading", async (level = 1, allow404Title = false) => {
@@ -187,6 +192,13 @@ export async function getBrowserPage(
     const button = page.locator(`button:has-text("${buttonText}")`);
     await button.click();
     verboseLog("clicked button with text");
+  });
+
+  addBrowserFunction("clickLink", async (buttonText: string) => {
+    verboseLog("clicking link with text", buttonText);
+    const link = page.locator(`a:link:has-text("${buttonText}")`);
+    await link.click();
+    verboseLog("clicked link with text");
   });
 
   addBrowserFunction("getCurrentUri", () =>
@@ -259,15 +271,56 @@ export async function getBrowserPage(
   });
 
   addBrowserFunction("refreshPageWhenJsDisabled", async () => {
-    if (jsDisabled) {
+    if (jsDisabled || turnOffJsEverywhere) {
       verboseLog("Refreshing page because JS is disabled");
       await page.reload();
+    } else {
+      verboseLog("Not refreshing page because JS is enabled");
     }
   });
 
   addBrowserFunction("refresh", async () => {
     verboseLog("Refreshing page");
     await page.reload();
+  });
+
+  addBrowserFunction("hasElement", async (selector: string, text?: string) => {
+    await browserFns.refreshPageWhenJsDisabled();
+    const extra = text ? `with text [${text}]` : "";
+    verboseLog(`Checking for element [${selector}] ${extra}`);
+    const count = await page.locator(selector).count();
+    verboseLog(`Found [${count}] elements [${selector}] ${extra}`);
+    return count > 0;
+  });
+  addBrowserFunction("getVoteSummary", async () => {
+    await browserFns.refreshPageWhenJsDisabled();
+    verboseLog(`Getting vote summary`);
+    const maxTime = Date.now() + 300;
+    // Locate the `dl` element
+    const selector = "dl.voteSummary";
+
+    let dlElement;
+    do {
+      dlElement = page.locator(selector);
+    } while (Date.now() < maxTime && await dlElement.count() === 0);
+
+    // Extract all `dt` and `dd` elements within the `dl`
+    const dtElements = await dlElement.locator("dt").allTextContents();
+    const ddElements = await dlElement.locator("dd").allTextContents();
+
+    // Ensure the number of `dt` and `dd` elements match
+    if (dtElements.length !== ddElements.length) {
+      throw new Error("Mismatch between number of <dt> and <dd> elements");
+    }
+
+    // Create a key-value object from the `dt` and `dd` pairs
+    const voteSummary: Record<string, number> = {};
+    for (let i = 0; i < dtElements.length; i++) {
+      voteSummary[dtElements[i]] = Number(ddElements[i]);
+    }
+
+    verboseLog("Vote summary extracted:", voteSummary);
+    return voteSummary;
   });
 
   if (parsedUrl.pathname) {

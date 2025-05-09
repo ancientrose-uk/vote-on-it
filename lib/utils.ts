@@ -30,3 +30,8 @@ export function getPublicUrl() {
   return Deno.env.get("VOI__CANONICAL_BASE_URL") ||
     `http://localhost:${getPort()}`;
 }
+
+export function getFullRoomUrlFromUrlName(urlName: string) {
+  return getPublicUrl() +
+    `/room/${encodeURIComponent(urlName)}`;
+}
