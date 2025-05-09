@@ -295,15 +295,14 @@ export async function getBrowserPage(
   addBrowserFunction("getVoteSummary", async () => {
     await browserFns.refreshPageWhenJsDisabled();
     verboseLog(`Getting vote summary`);
-
+    const maxTime = Date.now() + 300;
     // Locate the `dl` element
     const selector = "dl.voteSummary";
-    const dlElement = await page.locator(selector);
 
-    // Ensure the `dl` element exists
-    if (await dlElement.count() === 0) {
-      throw new Error(`No element found matching selector [${selector}]`);
-    }
+    let dlElement;
+    do {
+      dlElement = page.locator(selector);
+    } while (Date.now() < maxTime && await dlElement.count() === 0);
 
     // Extract all `dt` and `dd` elements within the `dl`
     const dtElements = await dlElement.locator("dt").allTextContents();

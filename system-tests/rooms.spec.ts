@@ -191,6 +191,7 @@ describe("Rooms", () => {
         thirdGuestBrowser,
         fourthGuestBrowser,
       ];
+
       await Promise.all(
         allBrowsers.map(async (browser) => {
           expect(await browser.getVoteSummary()).toEqual({

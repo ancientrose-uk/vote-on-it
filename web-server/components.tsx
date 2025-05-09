@@ -316,11 +316,16 @@ export function GuestVotingButtons(
         name="roomUrlName"
         value={roomUrlName}
       />
-      <button className={buttonClasses} type="submit" name="vote" value="for">
+      <button
+        className={`${buttonClasses} bg-green-800`}
+        type="submit"
+        name="vote"
+        value="for"
+      >
         Yes (vote for)
       </button>
       <button
-        className={buttonClasses}
+        className={`${buttonClasses} bg-red-800`}
         type="submit"
         name="vote"
         value="against"
@@ -328,7 +333,7 @@ export function GuestVotingButtons(
         No (vote against)
       </button>
       <button
-        className={buttonClasses}
+        className={`${buttonClasses} bg-gray-500`}
         type="submit"
         name="vote"
         value="abstain"

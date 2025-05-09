@@ -33,6 +33,8 @@ import {
 } from "../lib/events.ts";
 import { randomUUID } from "node:crypto";
 
+const serverStartTime = Date.now(); // todo, replace this with the latest build time.
+
 type RouteContext = {
   req: Request;
   authHandler: AuthHandler;
@@ -372,7 +374,6 @@ const routes: Routes = {
         initialPreviousVoteSummary: previousVoteSummaryByRoomUrlName[urlName],
         voterId,
       };
-      console.log("room state", state);
       return wrapReactElem(RoomPage(state), state);
     },
     POST: async ({ req, requestAuthContext, urlParams }) => {
@@ -528,14 +529,14 @@ function wrapReactElem(
       <head>
         <title>Vote On It!</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <link rel="stylesheet" href="/static/output.css" />
+        <link rel="stylesheet" href="/static/output.css?cb=${serverStartTime}" />
       </head>
       <body class="ml-16 mr-16">
         <div id="root">${html}</div>
         <script>
           window.__INITIAL_STATE__ = ${JSON.stringify(initialState)};
         </script>
-        <script type="module" src="/static/client.js"></script>
+        <script type="module" src="/static/client.js?cb=${serverStartTime}"></script>
       </body>
     </html>`,
     {
