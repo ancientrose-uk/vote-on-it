@@ -166,7 +166,6 @@ export function getUrlForRoomNameAndOwner(
 
 export function isUserOwnerOfRoom(user: User | undefined, roomUrlName: string) {
   if (!user) {
-    console.log("No user");
     return false;
   }
   const db = getDb();

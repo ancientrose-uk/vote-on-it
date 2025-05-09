@@ -119,7 +119,6 @@ export class RequestContext {
 
   public setCookieOnResponse(res: Response) {
     if (this.setCookieResponse) {
-      console.log("setting cookie respones", this.setCookieResponse);
       res.headers.set("Set-Cookie", this.setCookieResponse);
     }
     return res;
