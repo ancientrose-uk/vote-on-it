@@ -207,6 +207,12 @@ const routes: Routes = {
         return genericResponse("Room not found");
       }
       const voteId = randomUUID();
+
+      delete previousVoteSummaryByRoomUrlName[roomUrlName];
+      emitPreviousSummaryEvent(roomUrlName, {
+        type: "PREVIOUS_VOTE_SUMMARY",
+        previousVoteSummary: undefined,
+      });
       const currentVote = {
         questionText: voteTitle,
         voteId,
@@ -295,13 +301,23 @@ const routes: Routes = {
       if (currentVoteForRoom?.voteId !== voteId) {
         return redirect("/?error=vote-id-doesnt-match");
       }
-      previousVoteSummaryByRoomUrlName[roomUrlName] =
-        currentStatsByRoomUrlName[roomUrlName];
+      previousVoteSummaryByRoomUrlName[roomUrlName] = Object.assign(
+        {},
+        currentStatsByRoomUrlName[roomUrlName],
+      );
       if (!previousVoteSummaryByRoomUrlName[roomUrlName].question) {
         previousVoteSummaryByRoomUrlName[roomUrlName].question =
           currentVoteForRoom.questionText;
       }
+
       delete currentVoteByRoomUrlName[roomUrlName];
+      const state = currentStatsByRoomUrlName[roomUrlName];
+      if (state) {
+        state.totalVotes = 0;
+        state.votedAgainst = 0;
+        state.votedFor = 0;
+        state.abstained = 0;
+      }
       emitGuestRoomEvent(roomUrlName, {
         type: "GUEST_ROOM_EVENT",
         isOpen: true,
@@ -309,7 +325,7 @@ const routes: Routes = {
       });
       emitPreviousSummaryEvent(roomUrlName, {
         type: "PREVIOUS_VOTE_SUMMARY",
-        previousVoteSummary: currentStatsByRoomUrlName[roomUrlName],
+        previousVoteSummary: previousVoteSummaryByRoomUrlName[roomUrlName],
       });
       return redirect(getFullRoomUrlFromUrlName(roomUrlName));
     },
@@ -425,8 +441,8 @@ const routes: Routes = {
               controller.enqueue(
                 prepareDataForEventEnqueue(eventData, encoder),
               );
-            } catch (e) {
-              console.error("failed to send event", e);
+            } catch (_) {
+              console.error("failed to send event from server to client");
             }
           }
           console.log("streaming events started");

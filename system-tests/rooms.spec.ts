@@ -25,7 +25,7 @@ const configuredTestUsers = [
   },
 ];
 
-describe("Login Tests", () => {
+describe("Rooms", () => {
   let testScope: TestScopeForThisSuite = {};
   beforeEach(() => {
     testScope = {};
@@ -33,7 +33,7 @@ describe("Login Tests", () => {
       configuredTestUsers,
     );
   });
-  describe.only("with default server config", () => {
+  describe("with default server config", () => {
     beforeEach(async () => {
       if (!testScope.standardTestUsers) {
         throw new Error("required testScope variable is not set");
@@ -110,7 +110,7 @@ describe("Login Tests", () => {
       expect(await guestBrowser.hasElement("button", "Start Voting Session"))
         .not.toBe(true);
     });
-    it.only("should show all guests the question", async () => {
+    it("should work for a full run-through with multiple users and multiple votes (just one room here)", async () => {
       const roomName = generateUniqueTestRoomName();
       const { browserFns: hostBrowser } = await getBrowserPage(
         testScope.baseUrl || "NO BASE URL",
@@ -184,18 +184,82 @@ describe("Login Tests", () => {
         ),
       ]);
 
+      const allBrowsers = [
+        hostBrowser,
+        firstGuestBrowser,
+        secondGuestBrowser,
+        thirdGuestBrowser,
+        fourthGuestBrowser,
+      ];
+      await Promise.all(
+        allBrowsers.map(async (browser) => {
+          expect(await browser.getVoteSummary()).toEqual({
+            "Votes for": 2,
+            "Votes against": 1,
+            Abstained: 1,
+          });
+        }),
+      );
+
+      await Promise.all(allBrowsers.map(async (browser) => {
+        const votingSummaryExists = await browser.hasElement(".voteSummary");
+        if (!votingSummaryExists) {
+          throw new Error("Voting summary not found when it should be present");
+        }
+      }));
+
+      const allBrowsersPromise2 = Promise.all([
+        waitForRoomStatusMessageToBecome(
+          firstGuestBrowser,
+          "Question: Is the sky red?",
+        ),
+        waitForRoomStatusMessageToBecome(
+          secondGuestBrowser,
+          "Question: Is the sky red?",
+        ),
+        waitForRoomStatusMessageToBecome(
+          thirdGuestBrowser,
+          "Question: Is the sky red?",
+        ),
+        waitForRoomStatusMessageToBecome(
+          fourthGuestBrowser,
+          "Question: Is the sky red?",
+        ),
+      ]);
+
+      await hostBrowser.fillFormWith({
+        voteTitle: "Is the sky red?",
+      });
+
+      await hostBrowser.clickButton("Request Vote");
+
+      await allBrowsersPromise2;
+
+      await Promise.all(allBrowsers.map(async (browser) => {
+        const votingSummaryExists = await browser.hasElement(".voteSummary");
+        if (votingSummaryExists) {
+          throw new Error("Voting summary found when it should be absent");
+        }
+      }));
       await Promise.all(
         [
-          hostBrowser,
           firstGuestBrowser,
           secondGuestBrowser,
           thirdGuestBrowser,
           fourthGuestBrowser,
         ].map(async (browser) => {
+          await browser.clickButton("Abstain");
+        }),
+      );
+
+      await hostBrowser.clickButton("End vote");
+
+      await Promise.all(
+        allBrowsers.map(async (browser) => {
           expect(await browser.getVoteSummary()).toEqual({
-            "Votes for": 2,
-            "Votes against": 1,
-            Abstained: 1,
+            "Votes for": 0,
+            "Votes against": 0,
+            Abstained: 4,
           });
         }),
       );

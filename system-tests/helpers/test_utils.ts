@@ -271,9 +271,11 @@ export async function getBrowserPage(
   });
 
   addBrowserFunction("refreshPageWhenJsDisabled", async () => {
-    if (jsDisabled) {
+    if (jsDisabled || turnOffJsEverywhere) {
       verboseLog("Refreshing page because JS is disabled");
       await page.reload();
+    } else {
+      verboseLog("Not refreshing page because JS is enabled");
     }
   });
 
@@ -283,6 +285,7 @@ export async function getBrowserPage(
   });
 
   addBrowserFunction("hasElement", async (selector: string, text?: string) => {
+    await browserFns.refreshPageWhenJsDisabled();
     const extra = text ? `with text [${text}]` : "";
     verboseLog(`Checking for element [${selector}] ${extra}`);
     const count = await page.locator(selector).count();
@@ -290,6 +293,7 @@ export async function getBrowserPage(
     return count > 0;
   });
   addBrowserFunction("getVoteSummary", async () => {
+    await browserFns.refreshPageWhenJsDisabled();
     verboseLog(`Getting vote summary`);
 
     // Locate the `dl` element

@@ -30,7 +30,7 @@ export type HostRoomStatsData = {
 };
 export type PreviousVoteStats = {
   type: "PREVIOUS_VOTE_SUMMARY";
-  previousVoteSummary: CurrentStats;
+  previousVoteSummary?: CurrentStats;
 };
 
 export function addGuestRoomEventListener(
@@ -63,7 +63,7 @@ export function emitPreviousGuestStats(roomUrlName: string) {
 
 export function emitPreviousSummaryEvent(
   roomUrlName: string,
-  data: PreviousVoteStats,
+  data?: PreviousVoteStats,
 ) {
   guestRoomEvents.emit(`room-events-${roomUrlName}`, data);
 }
