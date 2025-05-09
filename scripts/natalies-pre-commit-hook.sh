@@ -8,4 +8,9 @@
 #
 # Note - this is intentionally set up to allow changes over time, you might choose not to opt-in to this.
 
-deno task check:all:fix && deno task check:all && deno task test:unit && deno task test:browser:all && deno task test:browser:all:no-js
+deno task check:all:fix &&
+deno task check:all &&
+deno task test:unit &&
+deno task test:browser:all &&
+deno task test:browser:all:no-js &&
+deno task test:semitest:all
