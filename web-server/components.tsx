@@ -493,40 +493,20 @@ export function RoomPage(
     initialPreviousVoteSummary?: CurrentStats;
   },
 ) {
-  const [statusMessage, setRoomStatusMessage] = isClientSide === true
-    ? React.useState(
-      statusMessageInput,
-    )
-    : [statusMessageInput, () => {}];
-  const [isOpen, setIsOpen] = isClientSide === true
-    ? React.useState(
-      roomOpenAtLoad,
-    )
-    : [roomOpenAtLoad, () => {}];
-  const [stats, setStats] = isClientSide === true
-    ? React.useState(
-      initialStats,
-    )
-    : [initialStats, () => {}];
+  const useState = isClientSide === true
+    ? React.useState
+    : (<T,>(result: T): [T, () => void] => [result, () => {}]);
 
-  const [currentVote, setCurrentVote] = isClientSide === true
-    ? React.useState(
-      initialCurrentVote,
-    )
-    : [initialCurrentVote, () => {}];
-
-  const [hasAlreadyVotedInThisVote, setHasAlreadyVotedInThisVote] =
-    isClientSide === true
-      ? React.useState(
-        initialHasAlreadyVotedInThisVote,
-      )
-      : [initialHasAlreadyVotedInThisVote, () => {}];
-
-  const [previousVoteSummary, setPreviousVoteSummary] = isClientSide === true
-    ? React.useState(
-      initialPreviousVoteSummary,
-    )
-    : [initialPreviousVoteSummary, () => {}];
+  const [statusMessage, setRoomStatusMessage] = useState(statusMessageInput);
+  const [isOpen, setIsOpen] = useState(roomOpenAtLoad);
+  const [stats, setStats] = useState(initialStats);
+  const [currentVote, setCurrentVote] = useState(initialCurrentVote);
+  const [hasAlreadyVotedInThisVote, setHasAlreadyVotedInThisVote] = useState(
+    initialHasAlreadyVotedInThisVote,
+  );
+  const [previousVoteSummary, setPreviousVoteSummary] = useState(
+    initialPreviousVoteSummary,
+  );
   if (isClientSide === true) {
     useEffect(() => {
       const eventSource = new EventSource(
