@@ -229,15 +229,67 @@ function getRequestVoteForm(roomUrlName: string) {
   );
 }
 
+function getVoteProgressElement(
+  { currentVote, stats }: { currentVote: CurrentVote; stats: CurrentStats },
+) {
+  if (!currentVote) {
+    return <p>No current vote info</p>;
+  }
+  const totals = [
+    stats.totalVotes,
+    stats.votedAgainst + stats.votedFor + stats.abstained,
+    currentVote.alreadyVoted.length,
+  ];
+  const firstTotal = totals[0];
+  if (totals.some((total) => total || 0 !== firstTotal || 0)) {
+    console.error("!!!!!");
+    console.error("Totals diverged", totals);
+    console.error("!!!!!");
+  }
+  const totalVotes = stats.totalVotes || 0;
+  const totalGuests = stats.totalGuests || 0;
+  if (totalVotes >= totalGuests) {
+    return <p>Vote complete</p>;
+  }
+  const percentage = Math.round((totalVotes / totalGuests) * 100);
+  const progress = (
+    <>
+      <div className="flex justify-between mb-1">
+        <span className="text-base font-medium text-blue-700 dark:text-white">
+          Voting progress
+        </span>
+        <span className="text-sm font-medium text-blue-700 dark:text-white">
+          {percentage}%
+        </span>
+      </div>
+      <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+        <div
+          className="bg-blue-500 h-2.5 rounded-full"
+          style={{ width: `${percentage}%` }}
+        >
+        </div>
+      </div>
+      <p>
+        Vote progress: {percentage}% ({totalVotes} out of {totalGuests} votes)
+      </p>
+    </>
+  );
+  return progress;
+}
+
 function getCurrentlyVotingHostInfo(
-  { currentVote, roomUrlName }: {
+  { currentVote, roomUrlName, stats }: {
     currentVote: CurrentVote;
     roomUrlName: string;
+    stats?: CurrentStats;
   },
 ) {
   return (
     <>
       <p>Currently voting on: {currentVote.questionText}</p>
+      {currentVote && stats
+        ? getVoteProgressElement({ currentVote, stats })
+        : null}
       <form action="/end-vote" method="post">
         <input
           type="hidden"
@@ -260,9 +312,10 @@ function getCurrentlyVotingHostInfo(
 export function getVoteControls(
   roomUrlName: string,
   currentVote?: CurrentVote,
+  stats?: CurrentStats,
 ) {
   return currentVote
-    ? getCurrentlyVotingHostInfo({ currentVote, roomUrlName })
+    ? getCurrentlyVotingHostInfo({ currentVote, roomUrlName, stats })
     : getRequestVoteForm(roomUrlName);
 }
 
@@ -291,7 +344,7 @@ export function RoomDisplayForHost(
         To invite others share this link: {roomUrl}
       </p>
       {isOpen
-        ? getVoteControls(roomUrlName, currentVote)
+        ? getVoteControls(roomUrlName, currentVote, stats)
         : getOpenVotingForm(roomUrlName)}
       <PreviousVoteSummaryList voteSummary={previousVoteSummary} />
     </>

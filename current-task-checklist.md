@@ -2,7 +2,7 @@ Checklist for the current task:
 
 - [x] Host can pose a question and send it to guests
 - [x] Guests can answer yes, no or abstain
-- [ ] Host can see the voting progress
+- [x] Host can see the voting progress
 - [x] Host can end the vote and guests no longer have the option to vote
 - [x] Host can see the final results after ending the vote
 
