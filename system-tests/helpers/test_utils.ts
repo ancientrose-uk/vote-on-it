@@ -289,6 +289,36 @@ export async function getBrowserPage(
     verboseLog(`Found [${count}] elements [${selector}] ${extra}`);
     return count > 0;
   });
+  addBrowserFunction("getVoteSummary", async () => {
+    verboseLog(`Getting vote summary`);
+
+    // Locate the `dl` element
+    const selector = "dl.voteSummary";
+    const dlElement = await page.locator(selector);
+
+    // Ensure the `dl` element exists
+    if (await dlElement.count() === 0) {
+      throw new Error(`No element found matching selector [${selector}]`);
+    }
+
+    // Extract all `dt` and `dd` elements within the `dl`
+    const dtElements = await dlElement.locator("dt").allTextContents();
+    const ddElements = await dlElement.locator("dd").allTextContents();
+
+    // Ensure the number of `dt` and `dd` elements match
+    if (dtElements.length !== ddElements.length) {
+      throw new Error("Mismatch between number of <dt> and <dd> elements");
+    }
+
+    // Create a key-value object from the `dt` and `dd` pairs
+    const voteSummary: Record<string, number> = {};
+    for (let i = 0; i < dtElements.length; i++) {
+      voteSummary[dtElements[i]] = Number(ddElements[i]);
+    }
+
+    verboseLog("Vote summary extracted:", voteSummary);
+    return voteSummary;
+  });
 
   if (parsedUrl.pathname) {
     await browserFns.visit(parsedUrl.pathname);

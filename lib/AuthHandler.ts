@@ -1,5 +1,6 @@
 import { shaEncryptPassword } from "../system-tests/helpers/encryption.ts";
 import { ensureDbExists, getSession, setSession } from "./database-access.ts";
+import { VoterId } from "./events.ts";
 
 await ensureDbExists();
 
@@ -56,23 +57,57 @@ export class RequestContext {
     if (await this.authHandler.validateCredentials(username, password)) {
       const token = crypto.randomUUID();
       setSession(token, username);
-      this.setCookieResponse = `session=${token}; HttpOnly; Path=/; Max-Age=${
-        24 * 60 * 60 * 1000
-      }`;
+      this.setUuidToCookie(`session`, token, 24 * 7);
       return true;
     }
     return false;
   }
 
-  public getUser(): User | undefined {
+  private setUuidToCookie(
+    cookieName: string,
+    cookieValue: `${string}-${string}-${string}-${string}-${string}`,
+    maxAgeInHours: number,
+  ) {
+    this.setCookieResponse +=
+      `${cookieName}=${cookieValue}; HttpOnly; Path=/; Max-Age=${
+        maxAgeInHours * 60 * 60 * 1000
+      };`;
+  }
+
+  private getUuidFromCookie(cookieName: string) {
     const cookie = this.req.headers.get("cookie");
     if (!cookie) {
       return undefined;
     }
-    const match = cookie.match(/session=([^;]+)/);
-    if (match) {
-      const token = match[1];
-      const username = getSession(token);
+    const match = cookie.match(new RegExp(`${cookieName}=([^;]+)`));
+    if (match && match[1].length === 36) {
+      return match[1];
+    }
+    return undefined;
+  }
+
+  public setVoterId(voterId: VoterId) {
+    this.setUuidToCookie(`voterId`, voterId, 365 * 24);
+  }
+
+  public getVoterId(): VoterId {
+    const uuidFromCookie = this.getUuidFromCookie(`voterId`) as
+      | VoterId
+      | undefined;
+    if (!uuidFromCookie) {
+      const newVoterId = crypto.randomUUID() as VoterId;
+      this.setVoterId(newVoterId);
+      console.log("set a new voterId", newVoterId);
+      return newVoterId;
+    }
+    console.log("got an existing voter id", uuidFromCookie);
+    return uuidFromCookie;
+  }
+
+  public getUser(): User | undefined {
+    const sessionId = this.getUuidFromCookie(`session`);
+    if (sessionId) {
+      const username = getSession(sessionId);
       if (username) {
         return { username };
       } else {
@@ -84,6 +119,7 @@ export class RequestContext {
 
   public setCookieOnResponse(res: Response) {
     if (this.setCookieResponse) {
+      console.log("setting cookie respones", this.setCookieResponse);
       res.headers.set("Set-Cookie", this.setCookieResponse);
     }
     return res;

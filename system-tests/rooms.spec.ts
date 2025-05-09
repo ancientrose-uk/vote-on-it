@@ -124,7 +124,7 @@ describe("Login Tests", () => {
       await hostBrowser.clickLink(roomUrl);
       const { browserFns: firstGuestBrowser } = await getBrowserPage(roomUrl);
       const { browserFns: secondGuestBrowser } = await getBrowserPage(roomUrl);
-      const { browserFns: thridGuestBrowser } = await getBrowserPage(roomUrl);
+      const { browserFns: thirdGuestBrowser } = await getBrowserPage(roomUrl);
       const { browserFns: fourthGuestBrowser } = await getBrowserPage(roomUrl);
 
       const allBrowsersPromise = Promise.all([
@@ -137,7 +137,7 @@ describe("Login Tests", () => {
           "Question: Is the sky blue?",
         ),
         waitForRoomStatusMessageToBecome(
-          thridGuestBrowser,
+          thirdGuestBrowser,
           "Question: Is the sky blue?",
         ),
         waitForRoomStatusMessageToBecome(
@@ -155,6 +155,50 @@ describe("Login Tests", () => {
       await hostBrowser.clickButton("Request Vote");
 
       await allBrowsersPromise;
+
+      await Promise.all([
+        firstGuestBrowser.clickButton("For"),
+        secondGuestBrowser.clickButton("Against"),
+        thirdGuestBrowser.clickButton("Abstain"),
+        fourthGuestBrowser.clickButton("For"),
+      ]);
+
+      await hostBrowser.clickButton("End vote");
+
+      await Promise.all([
+        waitForRoomStatusMessageToBecome(
+          firstGuestBrowser,
+          "Voting session started.",
+        ),
+        waitForRoomStatusMessageToBecome(
+          secondGuestBrowser,
+          "Voting session started.",
+        ),
+        waitForRoomStatusMessageToBecome(
+          thirdGuestBrowser,
+          "Voting session started.",
+        ),
+        waitForRoomStatusMessageToBecome(
+          fourthGuestBrowser,
+          "Voting session started.",
+        ),
+      ]);
+
+      await Promise.all(
+        [
+          hostBrowser,
+          firstGuestBrowser,
+          secondGuestBrowser,
+          thirdGuestBrowser,
+          fourthGuestBrowser,
+        ].map(async (browser) => {
+          expect(await browser.getVoteSummary()).toEqual({
+            "Votes for": 2,
+            "Votes against": 1,
+            Abstained: 1,
+          });
+        }),
+      );
     });
     it("should allow multiple hosts to create multiple rooms", async () => {
       const hosts = await Promise.all(

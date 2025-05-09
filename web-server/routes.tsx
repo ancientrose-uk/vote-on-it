@@ -19,11 +19,18 @@ import {
   roomNameByUrlName,
 } from "../lib/database-access.ts";
 import {
-  addRoomEventListener,
+  addGuestRoomEventListener,
+  addHostRoomStatsListener,
+  CurrentStats,
   CurrentVote,
-  emitRoomEvent,
-  RoomEventData,
+  emitGuestRoomEvent,
+  emitHostRoomStats,
+  emitPreviousGuestStats,
+  emitPreviousSummaryEvent,
+  GuestRoomEventData,
+  HostRoomStatsData,
 } from "../lib/events.ts";
+import { randomUUID } from "node:crypto";
 
 type RouteContext = {
   req: Request;
@@ -43,6 +50,26 @@ type Routes = {
 };
 
 const currentVoteByRoomUrlName: Record<string, CurrentVote> = {};
+const currentStatsByRoomUrlName: Record<string, CurrentStats> = {};
+const previousVoteSummaryByRoomUrlName: Record<string, CurrentStats> = {};
+
+function addOneGuestToRoom(urlName: string) {
+  currentStatsByRoomUrlName[urlName] = currentStatsByRoomUrlName[urlName] ||
+    { totalGuests: 0 };
+  currentStatsByRoomUrlName[urlName].totalGuests += 1;
+  emitHostRoomStats(urlName, currentStatsByRoomUrlName[urlName]);
+}
+
+function removeOneGuestFromRoom(urlName: string) {
+  console.log("removeOneGuestFromRoom", urlName);
+  if (!currentStatsByRoomUrlName[urlName]) {
+    console.log("NO CURRENT STATE!");
+    return;
+  }
+  currentStatsByRoomUrlName[urlName].totalGuests -= 1;
+  console.log("new total:", currentStatsByRoomUrlName[urlName].totalGuests);
+  emitHostRoomStats(urlName, currentStatsByRoomUrlName[urlName]);
+}
 
 function getErrorMessage(req: Request, missingFields: string[] = []) {
   if (missingFields.length > 0) {
@@ -69,7 +96,7 @@ function getStatusMessageText(isOpen: boolean, currentVote?: CurrentVote) {
 }
 
 function prepareDataForEventEnqueue(
-  value: RoomEventData,
+  value: GuestRoomEventData | HostRoomStatsData,
   encoder: TextEncoder,
 ) {
   const eventData = `data: ${JSON.stringify(value)}\n\n`;
@@ -179,15 +206,18 @@ const routes: Routes = {
       if (!isOpen) {
         return genericResponse("Room not found");
       }
-      currentVoteByRoomUrlName[roomUrlName] = {
+      const voteId = randomUUID();
+      const currentVote = {
         questionText: voteTitle,
+        voteId,
+        alreadyVoted: [],
       };
-      emitRoomEvent(roomUrlName, {
+      currentVoteByRoomUrlName[roomUrlName] = currentVote;
+      emitGuestRoomEvent(roomUrlName, {
+        type: "GUEST_ROOM_EVENT",
         statusMessage: "Vote requested",
         isOpen: !!isOpen,
-        currentVote: {
-          questionText: voteTitle,
-        },
+        currentVote,
       });
 
       return redirect(getFullRoomUrlFromUrlName(roomUrlName));
@@ -239,7 +269,8 @@ const routes: Routes = {
       }
       const result = openRoom(roomUrlName, user.username);
       if (result) {
-        emitRoomEvent(roomUrlName, {
+        emitGuestRoomEvent(roomUrlName, {
+          type: "GUEST_ROOM_EVENT",
           isOpen: true,
           statusMessage: getStatusMessageText(true),
         });
@@ -248,9 +279,45 @@ const routes: Routes = {
       return redirect("/account?error=room-name-not-found-b");
     },
   },
+  "/end-vote": {
+    POST: async ({ req, requestAuthContext }) => {
+      const formData = await req.formData();
+      const roomUrlName = formData.get("roomUrlName");
+      const voteId = formData.get("voteId");
+      const user = requestAuthContext.getUser();
+      if (typeof roomUrlName !== "string" || typeof voteId !== "string") {
+        return redirect("/account?error=room-name-or-vote-id-empty");
+      }
+      if (!isUserOwnerOfRoom(user, roomUrlName)) {
+        return redirect("/?error=not-logged-in");
+      }
+      const currentVoteForRoom = currentVoteByRoomUrlName[roomUrlName];
+      if (currentVoteForRoom?.voteId !== voteId) {
+        return redirect("/?error=vote-id-doesnt-match");
+      }
+      previousVoteSummaryByRoomUrlName[roomUrlName] =
+        currentStatsByRoomUrlName[roomUrlName];
+      if (!previousVoteSummaryByRoomUrlName[roomUrlName].question) {
+        previousVoteSummaryByRoomUrlName[roomUrlName].question =
+          currentVoteForRoom.questionText;
+      }
+      delete currentVoteByRoomUrlName[roomUrlName];
+      emitGuestRoomEvent(roomUrlName, {
+        type: "GUEST_ROOM_EVENT",
+        isOpen: true,
+        statusMessage: getStatusMessageText(true),
+      });
+      emitPreviousSummaryEvent(roomUrlName, {
+        type: "PREVIOUS_VOTE_SUMMARY",
+        previousVoteSummary: currentStatsByRoomUrlName[roomUrlName],
+      });
+      return redirect(getFullRoomUrlFromUrlName(roomUrlName));
+    },
+  },
   "/room/:urlName": {
     GET: ({ urlParams, requestAuthContext }) => {
       const { urlName } = urlParams;
+      const voterId = requestAuthContext.getVoterId();
       if (!urlName) {
         return redirect("/");
       }
@@ -261,6 +328,15 @@ const routes: Routes = {
         return redirect("/");
       }
       const userIsOwner = isUserOwnerOfRoom(user, urlName);
+
+      currentStatsByRoomUrlName[urlName] = currentStatsByRoomUrlName[urlName] ||
+        {
+          totalGuests: 0,
+        };
+      const currentVote = currentVoteByRoomUrlName[urlName];
+      const userAlreadyVoted = (currentVote?.alreadyVoted || []).includes(
+        voterId,
+      );
       const state = {
         roomName: roomName,
         statusMessageInput: getStatusMessageText(!!isOpen),
@@ -268,14 +344,57 @@ const routes: Routes = {
         fullRoomUrl: getFullRoomUrlFromUrlName(urlName),
         userIsOwner: !!userIsOwner,
         roomOpenAtLoad: !!isOpen,
-        initialCurrentVote: currentVoteByRoomUrlName[urlName],
+        initialCurrentVote: currentVote,
+        initialStats: currentStatsByRoomUrlName[urlName],
+        initialHasAlreadyVotedInThisVote: userAlreadyVoted,
+        initialPreviousVoteSummary: previousVoteSummaryByRoomUrlName[urlName],
+        voterId,
       };
       console.log("room state", state);
       return wrapReactElem(RoomPage(state), state);
     },
+    POST: async ({ req, requestAuthContext, urlParams }) => {
+      const { urlName: roomUrlName } = urlParams;
+      const formData = await req.formData();
+      const vote = getVoteFromFormData(formData);
+      const formDataRoomUrl = formData.get("roomUrlName");
+      if (!vote) {
+        return redirect(req.url + "/?error=vote-not-valid");
+      }
+      if (roomUrlName !== formDataRoomUrl) {
+        return redirect(req.url + "?error=room-combination-not-valid");
+      }
+      const voterId = requestAuthContext.getVoterId();
+      if (!roomUrlName) {
+        return redirect("/?error=room-not-found");
+      }
+      const currentVote = currentVoteByRoomUrlName[roomUrlName];
+      const voteStats = currentStatsByRoomUrlName[roomUrlName];
+      if (!currentVote || !voteStats) {
+        return redirect(req.url + "?error=vote-not-found");
+      }
+      const alreadyVoted = currentVote.alreadyVoted;
+      console.log("checking", alreadyVoted, voterId);
+      if (alreadyVoted.includes(voterId)) {
+        return redirect(req.url + "?error=already-voted");
+      }
+      if (!voterId) {
+        throw new Error("No voter id, wtf?");
+      }
+      alreadyVoted.push(voterId);
+      voteStats.totalVotes = voteStats.totalVotes || 0;
+      voteStats.votedFor = voteStats.votedFor || 0;
+      voteStats.votedAgainst = voteStats.votedAgainst || 0;
+      voteStats.abstained = voteStats.abstained || 0;
+      voteStats.totalVotes = voteStats.totalVotes + 1;
+      voteStats[vote] += 1;
+      emitHostRoomStats(roomUrlName, voteStats);
+      emitPreviousGuestStats(roomUrlName);
+      return redirect(req.url);
+    },
   },
   "/api/room/:urlName/events": {
-    GET: ({ urlParams }) => {
+    GET: ({ urlParams, requestAuthContext }) => {
       const { urlName } = urlParams;
 
       if (!urlName) {
@@ -289,10 +408,18 @@ const routes: Routes = {
       let interval = setInterval(() => {}, 9999);
       clearInterval(interval);
 
+      const isForOwner = isUserOwnerOfRoom(
+        requestAuthContext.getUser(),
+        urlName,
+      );
+
       const readableStreamDefaultWriter = new ReadableStream({
         start(controller) {
+          if (!isForOwner) {
+            addOneGuestToRoom(urlName);
+          }
           function send(
-            eventData: RoomEventData,
+            eventData: GuestRoomEventData | HostRoomStatsData,
           ) {
             try {
               controller.enqueue(
@@ -303,20 +430,31 @@ const routes: Routes = {
             }
           }
           console.log("streaming events started");
-          addRoomEventListener(urlName, (data: RoomEventData) => {
+          addGuestRoomEventListener(urlName, (data: GuestRoomEventData) => {
             send(data);
           });
-          interval = setInterval(() => {
+          if (isForOwner) {
+            addHostRoomStatsListener(urlName, (data) => {
+              send(data);
+            });
+          }
+          const sendCurrentStatus = () => {
             const isOpen = isRoomOpenByUrlName(urlName);
             send({
+              type: "GUEST_ROOM_EVENT",
               statusMessage: getStatusMessageText(!!isOpen),
               isOpen: !!isOpen,
               currentVote: currentVoteByRoomUrlName[urlName],
             });
-          }, 10_000);
+          };
+          interval = setInterval(sendCurrentStatus, 10_000);
+          sendCurrentStatus();
         },
         cancel() {
           clearInterval(interval);
+          if (!isForOwner && currentStatsByRoomUrlName[urlName]) {
+            removeOneGuestFromRoom(urlName);
+          }
           console.log("streaming events cancelled");
         },
       });
@@ -363,9 +501,10 @@ function wrapReactElem(
     <html>
       <head>
         <title>Vote On It!</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <link rel="stylesheet" href="/static/output.css" />
       </head>
-      <body>
+      <body class="ml-16 mr-16">
         <div id="root">${html}</div>
         <script>
           window.__INITIAL_STATE__ = ${JSON.stringify(initialState)};
@@ -417,4 +556,24 @@ export function lookupRoute(
     handler: defaultHandler,
     params: {},
   };
+}
+
+function getVoteFromFormData(
+  formData: FormData,
+): "votedFor" | "votedAgainst" | "abstained" | undefined {
+  const vote = formData.get("vote");
+  if (typeof vote !== "string") {
+    console.log("vote invalid - not string");
+    return;
+  }
+  if (vote === "for") {
+    return "votedFor";
+  }
+  if (vote === "against") {
+    return "votedAgainst";
+  }
+  if (vote === "abstain") {
+    return "abstained";
+  }
+  console.log("vote not valid", vote);
 }

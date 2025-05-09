@@ -1,10 +1,18 @@
 import React, { useEffect } from "react";
-import { CurrentVote, RoomEventData } from "../lib/events.ts";
+import {
+  CurrentStats,
+  CurrentVote,
+  GuestRoomEventData,
+  HostRoomStatsData,
+  PreviousVoteStats,
+  VoterId,
+} from "../lib/events.ts";
 
 const buttonClasses =
-  "bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-md transition-colors";
+  "bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-md transition-colors mr-6 mt-6 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50";
 const normalTextClasses = "text-gray-700 text-lg mb-4";
-const headingClasses = "text-3xl font-bold mb-8 text-gray-800 text-center";
+const headingClasses =
+  "text-3xl font-bold mb-8 text-gray-800 text-center pt-16";
 const normalFormClasses =
   "bg-white p-6 rounded-lg shadow-lg mb-16 border-gray-300";
 const normalAreaClasses = normalFormClasses;
@@ -221,21 +229,51 @@ function getRequestVoteForm(roomUrlName: string) {
   );
 }
 
+function getCurrentlyVotingHostInfo(
+  { currentVote, roomUrlName }: {
+    currentVote: CurrentVote;
+    roomUrlName: string;
+  },
+) {
+  return (
+    <>
+      <p>Currently voting on: {currentVote.questionText}</p>
+      <form action="/end-vote" method="post">
+        <input
+          type="hidden"
+          name="voteId"
+          value={currentVote.voteId}
+        />
+        <input
+          type="hidden"
+          name="roomUrlName"
+          value={roomUrlName}
+        />
+        <button className={buttonClasses} type="submit">
+          End Vote
+        </button>
+      </form>
+    </>
+  );
+}
+
 export function getVoteControls(
   roomUrlName: string,
   currentVote?: CurrentVote,
 ) {
   return currentVote
-    ? <p>Currently voting on: {currentVote.questionText}</p>
+    ? getCurrentlyVotingHostInfo({ currentVote, roomUrlName })
     : getRequestVoteForm(roomUrlName);
 }
 
 export function RoomDisplayForHost(
-  { roomUrl, roomUrlName, isOpen, currentVote }: {
+  { roomUrl, roomUrlName, isOpen, currentVote, stats, previousVoteSummary }: {
     roomUrl: string;
     roomUrlName: string;
     isOpen: boolean;
     currentVote?: CurrentVote;
+    stats: CurrentStats;
+    previousVoteSummary?: CurrentStats;
   },
 ) {
   return (
@@ -244,21 +282,117 @@ export function RoomDisplayForHost(
         You are the host of this room
       </p>
       <p className={normalTextClasses}>
+        The room is currently {isOpen
+          ? `open and ${stats.totalGuests} guests are connected`
+          : "closed"}.
+      </p>
+
+      <p className={normalTextClasses}>
         To invite others share this link: {roomUrl}
       </p>
       {isOpen
         ? getVoteControls(roomUrlName, currentVote)
         : getOpenVotingForm(roomUrlName)}
+      <PreviousVoteSummaryList voteSummary={previousVoteSummary} />
+    </>
+  );
+}
+
+export function GuestVotingButtons(
+  { currentVote, roomUrlName }: {
+    currentVote: CurrentVote;
+    roomUrlName: string;
+  },
+) {
+  return (
+    <form action="?" className={normalFormClasses} method="post">
+      <input
+        type="hidden"
+        name="voteId"
+        value={currentVote.voteId}
+      />
+      <input
+        type="hidden"
+        name="roomUrlName"
+        value={roomUrlName}
+      />
+      <button className={buttonClasses} type="submit" name="vote" value="for">
+        Yes (vote for)
+      </button>
+      <button
+        className={buttonClasses}
+        type="submit"
+        name="vote"
+        value="against"
+      >
+        No (vote against)
+      </button>
+      <button
+        className={buttonClasses}
+        type="submit"
+        name="vote"
+        value="abstain"
+      >
+        Abstain (do not vote on this question)
+      </button>
+    </form>
+  );
+}
+
+export function PreviousVoteSummaryList(
+  { voteSummary }: { voteSummary?: CurrentStats },
+) {
+  if (!voteSummary) {
+    return null;
+  }
+  return (
+    <>
+      <p className={normalTextClasses}>
+        Previous question: {voteSummary.question}
+      </p>
+      <dl className={`${normalAreaClasses} p-4 voteSummary`}>
+        <div className="mb-4">
+          <dt className={normalLabelClasses}>Votes for</dt>
+          <dd className={normalTextClasses}>{voteSummary.votedFor}</dd>
+        </div>
+        <div className="mb-4">
+          <dt className={normalLabelClasses}>Votes against</dt>
+          <dd className={normalTextClasses}>{voteSummary.votedAgainst}</dd>
+        </div>
+        <div className="mb-4">
+          <dt className={normalLabelClasses}>Abstained</dt>
+          <dd className={normalTextClasses}>{voteSummary.abstained}</dd>
+        </div>
+      </dl>
     </>
   );
 }
 
 export function RoomDisplayForGuest(
-  { statusMessage, currentVote }: {
+  {
+    statusMessage,
+    currentVote,
+    roomUrlName,
+    hasAlreadyVotedInThisVote,
+    previousVoteSummary,
+  }: {
     statusMessage: string;
     currentVote?: CurrentVote;
+    roomUrlName: string;
+    hasAlreadyVotedInThisVote?: boolean;
+    previousVoteSummary?: CurrentStats;
   },
 ) {
+  let voteDisplay = <span />;
+  if (currentVote) {
+    if (hasAlreadyVotedInThisVote) {
+      voteDisplay = (
+        <p className={normalTextClasses}>Your vote has been received</p>
+      );
+    } else {
+      voteDisplay = GuestVotingButtons({ currentVote, roomUrlName });
+    }
+  }
   return (
     <>
       <p className={"roomStatusMessage " + normalTextClasses}>
@@ -266,6 +400,8 @@ export function RoomDisplayForGuest(
           ? ("Question: " + currentVote.questionText)
           : statusMessage}
       </p>
+      {voteDisplay}
+      <PreviousVoteSummaryList voteSummary={previousVoteSummary} />
     </>
   );
 }
@@ -280,6 +416,10 @@ export function RoomPage(
     userIsOwner,
     roomOpenAtLoad,
     initialCurrentVote,
+    initialStats,
+    initialHasAlreadyVotedInThisVote,
+    voterId,
+    initialPreviousVoteSummary,
   }: {
     roomName: string;
     roomUrlName: string;
@@ -288,7 +428,11 @@ export function RoomPage(
     statusMessageInput: string;
     userIsOwner: boolean;
     roomOpenAtLoad: boolean;
-    initialCurrentVote?: { questionText: string };
+    initialCurrentVote?: CurrentVote;
+    initialStats?: CurrentStats;
+    initialHasAlreadyVotedInThisVote?: boolean;
+    voterId: VoterId;
+    initialPreviousVoteSummary?: CurrentStats;
   },
 ) {
   const [statusMessage, setRoomStatusMessage] = isClientSide === true
@@ -301,22 +445,59 @@ export function RoomPage(
       roomOpenAtLoad,
     )
     : [roomOpenAtLoad, () => {}];
+  const [stats, setStats] = isClientSide === true
+    ? React.useState(
+      initialStats,
+    )
+    : [initialStats, () => {}];
 
   const [currentVote, setCurrentVote] = isClientSide === true
     ? React.useState(
       initialCurrentVote,
     )
     : [initialCurrentVote, () => {}];
+
+  const [hasAlreadyVotedInThisVote, setHasAlreadyVotedInThisVote] =
+    isClientSide === true
+      ? React.useState(
+        initialHasAlreadyVotedInThisVote,
+      )
+      : [initialHasAlreadyVotedInThisVote, () => {}];
+
+  const [previousVoteSummary, setPreviousVoteSummary] = isClientSide === true
+    ? React.useState(
+      initialPreviousVoteSummary,
+    )
+    : [initialPreviousVoteSummary, () => {}];
   if (isClientSide === true) {
     useEffect(() => {
       const eventSource = new EventSource(
         `/api/room/${encodeURIComponent(roomUrlName)}/events`,
       );
       eventSource.onmessage = (event: { data: string }) => {
-        const data: RoomEventData = JSON.parse(event.data);
-        setRoomStatusMessage(data.statusMessage);
-        setIsOpen(data.isOpen);
-        setCurrentVote(data.currentVote);
+        const data: GuestRoomEventData | HostRoomStatsData | PreviousVoteStats =
+          JSON.parse(
+            event.data,
+          );
+        if (data.type === "GUEST_ROOM_EVENT") {
+          setRoomStatusMessage(data.statusMessage);
+          setIsOpen(data.isOpen);
+          setCurrentVote(data.currentVote);
+          const hasVoted = data.currentVote?.alreadyVoted.includes(voterId) ||
+            false;
+          setHasAlreadyVotedInThisVote(hasVoted);
+        }
+        if (data.type === "PREVIOUS_VOTE_SUMMARY") {
+          console.log(
+            data.previousVoteSummary,
+          );
+          setPreviousVoteSummary(data.previousVoteSummary);
+        }
+        if (userIsOwner && data.type === "HOST_ROOM_STATS") {
+          console.log("received host room stats", data.currentStats);
+          console.table(data.currentStats);
+          setStats(data.currentStats);
+        }
       };
       return () => {
         eventSource.close();
@@ -326,19 +507,24 @@ export function RoomPage(
   return (
     <div>
       <h1 className={headingClasses}>Welcome to the room: {roomName}</h1>
-      {userIsOwner
+      {userIsOwner && stats
         ? (
           <RoomDisplayForHost
             isOpen={isOpen}
             roomUrlName={roomUrlName}
             roomUrl={fullRoomUrl}
             currentVote={currentVote}
+            stats={stats}
+            previousVoteSummary={previousVoteSummary}
           />
         )
         : (
           <RoomDisplayForGuest
             statusMessage={statusMessage}
             currentVote={currentVote}
+            roomUrlName={roomUrlName}
+            hasAlreadyVotedInThisVote={hasAlreadyVotedInThisVote}
+            previousVoteSummary={previousVoteSummary}
           />
         )}
     </div>
