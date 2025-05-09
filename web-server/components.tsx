@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import { CurrentVote, RoomEventData } from "../lib/events.ts";
 
 const buttonClasses =
   "bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-md transition-colors";
@@ -190,11 +191,51 @@ function getOpenVotingForm(roomUrlName: string) {
   );
 }
 
+function getRequestVoteForm(roomUrlName: string) {
+  return (
+    <div className={normalAreaClasses}>
+      <p className={normalTextClasses}>Enter a question to vote on below:</p>
+      <form action="/request-vote" method="post">
+        <input
+          type="hidden"
+          name="roomUrlName"
+          value={roomUrlName}
+        />
+        <label
+          htmlFor="voteTitle"
+          className={normalLabelClasses}
+        >
+          Question to vote on:
+        </label>
+        <input
+          type="text"
+          id="voteTitle"
+          name="voteTitle"
+          className={normalInputClasses}
+        />
+        <button className={buttonClasses} type="submit">
+          Request Vote
+        </button>
+      </form>
+    </div>
+  );
+}
+
+export function getVoteControls(
+  roomUrlName: string,
+  currentVote?: CurrentVote,
+) {
+  return currentVote
+    ? <p>Currently voting on: {currentVote.questionText}</p>
+    : getRequestVoteForm(roomUrlName);
+}
+
 export function RoomDisplayForHost(
-  { roomUrl, roomUrlName, isOpen }: {
+  { roomUrl, roomUrlName, isOpen, currentVote }: {
     roomUrl: string;
     roomUrlName: string;
     isOpen: boolean;
+    currentVote?: CurrentVote;
   },
 ) {
   return (
@@ -205,18 +246,27 @@ export function RoomDisplayForHost(
       <p className={normalTextClasses}>
         To invite others share this link: {roomUrl}
       </p>
-      {isOpen ? "" : getOpenVotingForm(roomUrlName)}
+      {isOpen
+        ? getVoteControls(roomUrlName, currentVote)
+        : getOpenVotingForm(roomUrlName)}
     </>
   );
 }
 
 export function RoomDisplayForGuest(
-  { statusMessage }: { statusMessage: string },
+  { statusMessage, currentVote }: {
+    statusMessage: string;
+    currentVote?: CurrentVote;
+  },
 ) {
   return (
-    <p className={"roomStatusMessage " + normalTextClasses}>
-      {statusMessage}
-    </p>
+    <>
+      <p className={"roomStatusMessage " + normalTextClasses}>
+        {currentVote
+          ? ("Question: " + currentVote.questionText)
+          : statusMessage}
+      </p>
+    </>
   );
 }
 
@@ -229,6 +279,7 @@ export function RoomPage(
     statusMessageInput,
     userIsOwner,
     roomOpenAtLoad,
+    initialCurrentVote,
   }: {
     roomName: string;
     roomUrlName: string;
@@ -237,6 +288,7 @@ export function RoomPage(
     statusMessageInput: string;
     userIsOwner: boolean;
     roomOpenAtLoad: boolean;
+    initialCurrentVote?: { questionText: string };
   },
 ) {
   const [statusMessage, setRoomStatusMessage] = isClientSide === true
@@ -249,16 +301,22 @@ export function RoomPage(
       roomOpenAtLoad,
     )
     : [roomOpenAtLoad, () => {}];
+
+  const [currentVote, setCurrentVote] = isClientSide === true
+    ? React.useState(
+      initialCurrentVote,
+    )
+    : [initialCurrentVote, () => {}];
   if (isClientSide === true) {
     useEffect(() => {
       const eventSource = new EventSource(
         `/api/room/${encodeURIComponent(roomUrlName)}/events`,
       );
-      eventSource.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        console.log("data", data);
+      eventSource.onmessage = (event: { data: string }) => {
+        const data: RoomEventData = JSON.parse(event.data);
         setRoomStatusMessage(data.statusMessage);
         setIsOpen(data.isOpen);
+        setCurrentVote(data.currentVote);
       };
       return () => {
         eventSource.close();
@@ -274,11 +332,13 @@ export function RoomPage(
             isOpen={isOpen}
             roomUrlName={roomUrlName}
             roomUrl={fullRoomUrl}
+            currentVote={currentVote}
           />
         )
         : (
           <RoomDisplayForGuest
             statusMessage={statusMessage}
+            currentVote={currentVote}
           />
         )}
     </div>

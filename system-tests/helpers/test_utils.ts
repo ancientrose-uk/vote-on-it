@@ -106,9 +106,9 @@ export async function getBrowserPage(
       const timer = setTimeout(() => {
         reject(
           new Error(
-            `Task [${name}] with parameters [${
-              args.join(", ")
-            }] timed out after [${timeout}]ms`,
+            `Task [${name}] with parameters ${
+              JSON.stringify(args)
+            } timed out after [${timeout}]ms`,
           ),
         );
       }, timeout);

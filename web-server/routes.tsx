@@ -14,10 +14,16 @@ import {
   getLatestRoomNameForOwnerName,
   getUrlForRoomNameAndOwner,
   isRoomOpenByUrlName,
+  isUserOwnerOfRoom,
   openRoom,
   roomNameByUrlName,
 } from "../lib/database-access.ts";
-import { roomEvents } from "../lib/events.ts";
+import {
+  addRoomEventListener,
+  CurrentVote,
+  emitRoomEvent,
+  RoomEventData,
+} from "../lib/events.ts";
 
 type RouteContext = {
   req: Request;
@@ -36,6 +42,8 @@ type Routes = {
   };
 };
 
+const currentVoteByRoomUrlName: Record<string, CurrentVote> = {};
+
 function getErrorMessage(req: Request, missingFields: string[] = []) {
   if (missingFields.length > 0) {
     return `Please enter your ${missingFields.join(" and ")}`;
@@ -50,14 +58,18 @@ function getErrorMessage(req: Request, missingFields: string[] = []) {
   }
 }
 
-function getStatusMessageText(isOpen: boolean) {
-  return isOpen
-    ? "Voting session started."
-    : "Waiting for host to start voting session.";
+function getStatusMessageText(isOpen: boolean, currentVote?: CurrentVote) {
+  if (currentVote) {
+    return `Vote requested`;
+  }
+  if (isOpen) {
+    return "Voting session started.";
+  }
+  return "Waiting for host to start voting session.";
 }
 
 function prepareDataForEventEnqueue(
-  value: { roomName: string; statusMessage: string },
+  value: RoomEventData,
   encoder: TextEncoder,
 ) {
   const eventData = `data: ${JSON.stringify(value)}\n\n`;
@@ -143,6 +155,51 @@ const routes: Routes = {
       return wrapReactElem(AccountPage(state), state);
     },
   },
+  "/request-vote": {
+    POST: async ({ req, requestAuthContext }) => {
+      const formData = await req.formData();
+      const roomUrlName = formData.get("roomUrlName");
+      const voteTitle = formData.get("voteTitle");
+      const user = requestAuthContext.getUser();
+      if (typeof roomUrlName !== "string") {
+        return genericResponse("roomUrlName is not a string");
+      }
+      if (typeof voteTitle !== "string") {
+        return genericResponse("voteTitle is not a string");
+      }
+      if (!user) {
+        return genericResponse(
+          '"You need to be logged in to perform this action"',
+        );
+      }
+      if (!isUserOwnerOfRoom(user, roomUrlName)) {
+        return genericResponse("Wrong user trying to request a vote");
+      }
+      const isOpen = roomNameByUrlName(roomUrlName);
+      if (!isOpen) {
+        return genericResponse("Room not found");
+      }
+      currentVoteByRoomUrlName[roomUrlName] = {
+        questionText: voteTitle,
+      };
+      emitRoomEvent(roomUrlName, {
+        statusMessage: "Vote requested",
+        isOpen: !!isOpen,
+        currentVote: {
+          questionText: voteTitle,
+        },
+      });
+
+      return redirect(getFullRoomUrlFromUrlName(roomUrlName));
+      function genericResponse(reason: string) {
+        console.error(reason);
+        return new Response(
+          "An error occurred while processing your request. Maybe the room doesn't exist, maybe you don't have access, maybe something went wrong  on our side.",
+          { status: 500 },
+        );
+      }
+    },
+  },
   "/create-room": {
     POST: async ({ req, requestAuthContext }) => {
       const user = requestAuthContext.getUser();
@@ -182,9 +239,9 @@ const routes: Routes = {
       }
       const result = openRoom(roomUrlName, user.username);
       if (result) {
-        roomEvents.emit(`room-${roomUrlName}`, {
+        emitRoomEvent(roomUrlName, {
           isOpen: true,
-          name: roomUrlName,
+          statusMessage: getStatusMessageText(true),
         });
         return redirect(getFullRoomUrlFromUrlName(roomUrlName));
       }
@@ -203,8 +260,7 @@ const routes: Routes = {
       if (!roomName) {
         return redirect("/");
       }
-      const userIsOwner = user &&
-        getUrlForRoomNameAndOwner(roomName, user.username) === urlName; // long winded way of handling it but I'm planning to look at database layer changes later
+      const userIsOwner = isUserOwnerOfRoom(user, urlName);
       const state = {
         roomName: roomName,
         statusMessageInput: getStatusMessageText(!!isOpen),
@@ -212,6 +268,7 @@ const routes: Routes = {
         fullRoomUrl: getFullRoomUrlFromUrlName(urlName),
         userIsOwner: !!userIsOwner,
         roomOpenAtLoad: !!isOpen,
+        initialCurrentVote: currentVoteByRoomUrlName[urlName],
       };
       console.log("room state", state);
       return wrapReactElem(RoomPage(state), state);
@@ -235,25 +292,26 @@ const routes: Routes = {
       const readableStreamDefaultWriter = new ReadableStream({
         start(controller) {
           function send(
-            eventData: { roomName: string; statusMessage: string },
+            eventData: RoomEventData,
           ) {
-            controller.enqueue(prepareDataForEventEnqueue(eventData, encoder));
+            try {
+              controller.enqueue(
+                prepareDataForEventEnqueue(eventData, encoder),
+              );
+            } catch (e) {
+              console.error("failed to send event", e);
+            }
           }
           console.log("streaming events started");
-          roomEvents.on(
-            `room-${urlName}`,
-            (data: { roomName: string; isOpen: true }) => {
-              send({
-                roomName,
-                statusMessage: getStatusMessageText(data.isOpen),
-              });
-            },
-          );
+          addRoomEventListener(urlName, (data: RoomEventData) => {
+            send(data);
+          });
           interval = setInterval(() => {
             const isOpen = isRoomOpenByUrlName(urlName);
             send({
-              roomName,
               statusMessage: getStatusMessageText(!!isOpen),
+              isOpen: !!isOpen,
+              currentVote: currentVoteByRoomUrlName[urlName],
             });
           }, 10_000);
         },

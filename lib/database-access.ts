@@ -2,6 +2,7 @@ import path from "node:path";
 import { Database } from "jsr:@db/sqlite";
 import { pathJoin, projectDir } from "./paths.ts";
 import { randomUUID } from "node:crypto";
+import { User } from "./AuthHandler.ts";
 
 let db: Database | undefined;
 
@@ -161,4 +162,23 @@ export function getUrlForRoomNameAndOwner(
     return null;
   }
   return row.urlName;
+}
+
+export function isUserOwnerOfRoom(user: User | undefined, roomUrlName: string) {
+  if (!user) {
+    console.log("No user");
+    return false;
+  }
+  const db = getDb();
+  const row = db.prepare(
+    `
+    SELECT ownerUsername FROM rooms WHERE urlName = ?;
+    `,
+  ).get<{ ownerUsername: string }>(roomUrlName);
+  if (!row) {
+    console.log("No row", { roomUrlName });
+    return false;
+  }
+  console.log("Comparing", row.ownerUsername, user.username);
+  return row.ownerUsername === user.username;
 }

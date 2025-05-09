@@ -33,7 +33,7 @@ describe("Login Tests", () => {
       configuredTestUsers,
     );
   });
-  describe("with default server config", () => {
+  describe.only("with default server config", () => {
     beforeEach(async () => {
       if (!testScope.standardTestUsers) {
         throw new Error("required testScope variable is not set");
@@ -109,6 +109,52 @@ describe("Login Tests", () => {
         .toBe(true);
       expect(await guestBrowser.hasElement("button", "Start Voting Session"))
         .not.toBe(true);
+    });
+    it.only("should show all guests the question", async () => {
+      const roomName = generateUniqueTestRoomName();
+      const { browserFns: hostBrowser } = await getBrowserPage(
+        testScope.baseUrl || "NO BASE URL",
+      );
+      const { roomUrl } = await loginAndCreateRoom(
+        hostBrowser,
+        roomName,
+        "testuser",
+        "testpassword",
+      );
+      await hostBrowser.clickLink(roomUrl);
+      const { browserFns: firstGuestBrowser } = await getBrowserPage(roomUrl);
+      const { browserFns: secondGuestBrowser } = await getBrowserPage(roomUrl);
+      const { browserFns: thridGuestBrowser } = await getBrowserPage(roomUrl);
+      const { browserFns: fourthGuestBrowser } = await getBrowserPage(roomUrl);
+
+      const allBrowsersPromise = Promise.all([
+        waitForRoomStatusMessageToBecome(
+          firstGuestBrowser,
+          "Question: Is the sky blue?",
+        ),
+        waitForRoomStatusMessageToBecome(
+          secondGuestBrowser,
+          "Question: Is the sky blue?",
+        ),
+        waitForRoomStatusMessageToBecome(
+          thridGuestBrowser,
+          "Question: Is the sky blue?",
+        ),
+        waitForRoomStatusMessageToBecome(
+          fourthGuestBrowser,
+          "Question: Is the sky blue?",
+        ),
+      ]);
+
+      await hostBrowser.clickButton(`Start Voting Session`);
+
+      await hostBrowser.fillFormWith({
+        voteTitle: "Is the sky blue?",
+      });
+
+      await hostBrowser.clickButton("Request Vote");
+
+      await allBrowsersPromise;
     });
     it("should allow multiple hosts to create multiple rooms", async () => {
       const hosts = await Promise.all(

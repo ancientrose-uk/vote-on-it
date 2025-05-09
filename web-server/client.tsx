@@ -45,6 +45,7 @@ const router = createBrowserRouter([
         fullRoomUrl={initialState.fullRoomUrl}
         userIsOwner={initialState.userIsOwner}
         roomOpenAtLoad={initialState.roomOpenAtLoad}
+        initialCurrentVote={initialState.initialCurrentVote}
       />
     ),
   },

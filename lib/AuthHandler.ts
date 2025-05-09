@@ -37,7 +37,7 @@ export class AuthHandler {
   }
 }
 
-type User = {
+export type User = {
   username: string;
 };
 
