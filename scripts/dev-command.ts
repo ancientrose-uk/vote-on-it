@@ -128,10 +128,10 @@ async function runCommandSequence(commands: string[]) {
       if (!shouldRunNext) {
         console.log(`Chain broken by command: [${command}]`);
       }
-      console.log(`Server should be running on (a)`, assumedServerUrl);
+      console.log(`Server should be running on`, assumedServerUrl);
       return;
     }
-    console.log(`Server should be running on (b)`, assumedServerUrl);
+    console.log(`Server should be running on`, assumedServerUrl);
   }
   console.log(`Finished running all commands in [${Date.now() - start}]ms`);
 }
@@ -191,7 +191,7 @@ async function watchForFileSystemChanges() {
       event.paths.some((path) => {
         const pathParts = path.split("/");
         return !pathParts.includes("public") &&
-          !pathParts.includes(".persistence");
+          !pathParts.some((part) => part.startsWith("."));
       })
     ) {
       console.log("firing change event");

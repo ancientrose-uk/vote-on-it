@@ -97,10 +97,8 @@ export class RequestContext {
     if (!uuidFromCookie) {
       const newVoterId = crypto.randomUUID() as VoterId;
       this.setVoterId(newVoterId);
-      console.log("set a new voterId", newVoterId);
       return newVoterId;
     }
-    console.log("got an existing voter id", uuidFromCookie);
     return uuidFromCookie;
   }
 

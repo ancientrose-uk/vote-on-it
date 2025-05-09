@@ -178,6 +178,5 @@ export function isUserOwnerOfRoom(user: User | undefined, roomUrlName: string) {
     console.log("No row", { roomUrlName });
     return false;
   }
-  console.log("Comparing", row.ownerUsername, user.username);
   return row.ownerUsername === user.username;
 }

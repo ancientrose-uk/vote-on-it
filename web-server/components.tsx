@@ -526,14 +526,9 @@ export function RoomPage(
           setHasAlreadyVotedInThisVote(hasVoted);
         }
         if (data.type === "PREVIOUS_VOTE_SUMMARY") {
-          console.log(
-            data.previousVoteSummary,
-          );
           setPreviousVoteSummary(data.previousVoteSummary);
         }
         if (userIsOwner && data.type === "HOST_ROOM_STATS") {
-          console.log("received host room stats", data.currentStats);
-          console.table(data.currentStats);
           setStats(data.currentStats);
         }
       };

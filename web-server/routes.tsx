@@ -274,7 +274,7 @@ const routes: Routes = {
       if (!user) {
         return redirect("/account?error=not-logged-in");
       }
-      console.log({
+      console.log("opened room", {
         roomName: roomUrlName,
         user: user.username,
       });
@@ -397,7 +397,6 @@ const routes: Routes = {
         return redirect(req.url + "?error=vote-not-found");
       }
       const alreadyVoted = currentVote.alreadyVoted;
-      console.log("checking", alreadyVoted, voterId);
       if (alreadyVoted.includes(voterId)) {
         return redirect(req.url + "?error=already-voted");
       }
@@ -450,10 +449,9 @@ const routes: Routes = {
                 prepareDataForEventEnqueue(eventData, encoder),
               );
             } catch (_) {
-              console.error("failed to send event from server to client");
+              // ignore
             }
           }
-          console.log("streaming events started");
           addGuestRoomEventListener(urlName, (data: GuestRoomEventData) => {
             send(data);
           });
@@ -482,7 +480,6 @@ const routes: Routes = {
           if (!isForOwner && currentStatsByRoomUrlName[urlName]) {
             removeOneGuestFromRoom(urlName, voterId);
           }
-          console.log("streaming events cancelled");
         },
       });
 
@@ -511,8 +508,6 @@ export const clientRoutes = Object.keys(routes).reduce((acc, path) => {
   }
   return acc;
 }, {} as { [path: string]: RouteHandler });
-
-console.log("clientRoutes", clientRoutes);
 
 export const defaultHandler: RouteHandler = () => {
   return wrapReactElem(<NotFoundPage />);
