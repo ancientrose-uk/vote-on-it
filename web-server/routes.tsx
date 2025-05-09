@@ -29,6 +29,7 @@ import {
   emitPreviousSummaryEvent,
   GuestRoomEventData,
   HostRoomStatsData,
+  VoterId,
 } from "../lib/events.ts";
 import { randomUUID } from "node:crypto";
 
@@ -52,23 +53,28 @@ type Routes = {
 const currentVoteByRoomUrlName: Record<string, CurrentVote> = {};
 const currentStatsByRoomUrlName: Record<string, CurrentStats> = {};
 const previousVoteSummaryByRoomUrlName: Record<string, CurrentStats> = {};
+const currentUserListByRoomUrlName: Record<string, Set<VoterId>> = {};
 
-function addOneGuestToRoom(urlName: string) {
-  currentStatsByRoomUrlName[urlName] = currentStatsByRoomUrlName[urlName] ||
-    { totalGuests: 0 };
-  currentStatsByRoomUrlName[urlName].totalGuests += 1;
+function emitRoomSizeChange(urlName: string) {
+  currentStatsByRoomUrlName[urlName].totalGuests =
+    currentUserListByRoomUrlName[urlName].size;
   emitHostRoomStats(urlName, currentStatsByRoomUrlName[urlName]);
 }
 
-function removeOneGuestFromRoom(urlName: string) {
-  console.log("removeOneGuestFromRoom", urlName);
-  if (!currentStatsByRoomUrlName[urlName]) {
-    console.log("NO CURRENT STATE!");
-    return;
-  }
-  currentStatsByRoomUrlName[urlName].totalGuests -= 1;
-  console.log("new total:", currentStatsByRoomUrlName[urlName].totalGuests);
-  emitHostRoomStats(urlName, currentStatsByRoomUrlName[urlName]);
+function addOneGuestToRoom(urlName: string, voterId: VoterId) {
+  currentUserListByRoomUrlName[urlName] =
+    currentUserListByRoomUrlName[urlName] || new Set<VoterId>();
+  currentStatsByRoomUrlName[urlName] = currentStatsByRoomUrlName[urlName] || {};
+  currentUserListByRoomUrlName[urlName].add(voterId);
+  emitRoomSizeChange(urlName);
+}
+
+function removeOneGuestFromRoom(urlName: string, voterId: VoterId) {
+  currentUserListByRoomUrlName[urlName] =
+    currentUserListByRoomUrlName[urlName] || new Set<VoterId>();
+  currentStatsByRoomUrlName[urlName] = currentStatsByRoomUrlName[urlName] || {};
+  currentUserListByRoomUrlName[urlName].delete(voterId);
+  emitRoomSizeChange(urlName);
 }
 
 function getErrorMessage(req: Request, missingFields: string[] = []) {
@@ -428,11 +434,12 @@ const routes: Routes = {
         requestAuthContext.getUser(),
         urlName,
       );
+      const voterId = requestAuthContext.getVoterId();
 
       const readableStreamDefaultWriter = new ReadableStream({
         start(controller) {
           if (!isForOwner) {
-            addOneGuestToRoom(urlName);
+            addOneGuestToRoom(urlName, voterId);
           }
           function send(
             eventData: GuestRoomEventData | HostRoomStatsData,
@@ -456,6 +463,9 @@ const routes: Routes = {
           }
           const sendCurrentStatus = () => {
             const isOpen = isRoomOpenByUrlName(urlName);
+            if (!isForOwner) {
+              addOneGuestToRoom(urlName, voterId);
+            }
             send({
               type: "GUEST_ROOM_EVENT",
               statusMessage: getStatusMessageText(!!isOpen),
@@ -469,7 +479,7 @@ const routes: Routes = {
         cancel() {
           clearInterval(interval);
           if (!isForOwner && currentStatsByRoomUrlName[urlName]) {
-            removeOneGuestFromRoom(urlName);
+            removeOneGuestFromRoom(urlName, voterId);
           }
           console.log("streaming events cancelled");
         },
