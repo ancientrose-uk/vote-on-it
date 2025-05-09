@@ -40,8 +40,11 @@ const router = createBrowserRouter([
       <RoomPage
         roomName={initialState.roomName}
         isClientSide
-        statusMessage={initialState.statusMessage}
+        statusMessageInput={initialState.statusMessageInput}
         roomUrlName={initialState.roomUrlName}
+        fullRoomUrl={initialState.fullRoomUrl}
+        userIsOwner={initialState.userIsOwner}
+        roomOpenAtLoad={initialState.roomOpenAtLoad}
       />
     ),
   },

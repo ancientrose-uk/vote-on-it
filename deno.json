@@ -10,6 +10,12 @@
     "test:unit": {
       "command": "deno test --allow-all ./lib/**/*.spec.ts"
     },
+    "test:browser:basic": {
+      "command": "deno test --allow-all ./system-tests/basic.spec.ts",
+      "dependencies": [
+        "build"
+      ]
+    },
     "test:browser:login": {
       "command": "deno test --allow-all ./system-tests/login.spec.ts",
       "dependencies": [

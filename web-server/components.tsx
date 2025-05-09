@@ -121,22 +121,13 @@ function getLatestRoomDisplay(
   }
   return (
     <div className={normalAreaClasses}>
+      <h2 className={headingClasses}>{roomName}</h2>
       <p className={normalTextClasses}>
         This is the link to share for others to vote with you:
       </p>
       <p className={roomUrlClasses}>
-        {roomUrl}
+        <a href={roomUrl} className={normalLinkClasses}>{roomUrl}</a>
       </p>
-      <form action="/open-room" method="post">
-        <input
-          type="hidden"
-          name="roomName"
-          value={roomName}
-        />
-        <button className={buttonClasses} type="submit">
-          Start Voting Session {roomName}
-        </button>
-      </form>
     </div>
   );
 }
@@ -184,20 +175,80 @@ export function AccountPage(
   );
 }
 
-export function RoomPage(
-  { roomName, roomUrlName, isClientSide, statusMessage }: {
-    roomName: string;
+function getOpenVotingForm(roomUrlName: string) {
+  return (
+    <form action="/open-room" method="post">
+      <input
+        type="hidden"
+        name="roomUrlName"
+        value={roomUrlName}
+      />
+      <button className={buttonClasses} type="submit">
+        Start Voting Session
+      </button>
+    </form>
+  );
+}
+
+export function RoomDisplayForHost(
+  { roomUrl, roomUrlName, isOpen }: {
+    roomUrl: string;
     roomUrlName: string;
-    isClientSide?: boolean;
-    statusMessage?: string;
+    isOpen: boolean;
   },
 ) {
-  const initialRoomStatusMessage = statusMessage || "Waiting for update...";
-  const [roomStatusMessage, setRoomStatusMessage] = isClientSide === true
+  return (
+    <>
+      <p className={"roomStatusMessage " + normalTextClasses}>
+        You are the host of this room
+      </p>
+      <p className={normalTextClasses}>
+        To invite others share this link: {roomUrl}
+      </p>
+      {isOpen ? "" : getOpenVotingForm(roomUrlName)}
+    </>
+  );
+}
+
+export function RoomDisplayForGuest(
+  { statusMessage }: { statusMessage: string },
+) {
+  return (
+    <p className={"roomStatusMessage " + normalTextClasses}>
+      {statusMessage}
+    </p>
+  );
+}
+
+export function RoomPage(
+  {
+    roomName,
+    roomUrlName,
+    fullRoomUrl,
+    isClientSide,
+    statusMessageInput,
+    userIsOwner,
+    roomOpenAtLoad,
+  }: {
+    roomName: string;
+    roomUrlName: string;
+    fullRoomUrl: string;
+    isClientSide?: boolean;
+    statusMessageInput: string;
+    userIsOwner: boolean;
+    roomOpenAtLoad: boolean;
+  },
+) {
+  const [statusMessage, setRoomStatusMessage] = isClientSide === true
     ? React.useState(
-      initialRoomStatusMessage,
+      statusMessageInput,
     )
-    : [initialRoomStatusMessage, () => {}];
+    : [statusMessageInput, () => {}];
+  const [isOpen, setIsOpen] = isClientSide === true
+    ? React.useState(
+      roomOpenAtLoad,
+    )
+    : [roomOpenAtLoad, () => {}];
   if (isClientSide === true) {
     useEffect(() => {
       const eventSource = new EventSource(
@@ -207,6 +258,7 @@ export function RoomPage(
         const data = JSON.parse(event.data);
         console.log("data", data);
         setRoomStatusMessage(data.statusMessage);
+        setIsOpen(data.isOpen);
       };
       return () => {
         eventSource.close();
@@ -214,11 +266,21 @@ export function RoomPage(
     }, []);
   }
   return (
-    <div className="">
+    <div>
       <h1 className={headingClasses}>Welcome to the room: {roomName}</h1>
-      <p className={"roomStatusMessage " + normalTextClasses}>
-        {roomStatusMessage}
-      </p>
+      {userIsOwner
+        ? (
+          <RoomDisplayForHost
+            isOpen={isOpen}
+            roomUrlName={roomUrlName}
+            roomUrl={fullRoomUrl}
+          />
+        )
+        : (
+          <RoomDisplayForGuest
+            statusMessage={statusMessage}
+          />
+        )}
     </div>
   );
 }

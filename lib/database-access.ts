@@ -82,13 +82,13 @@ export function createRoom(roomName: string, ownerUsername: string) {
   return { urlName };
 }
 
-export function openRoom(roomName: string, ownerUsername: string) {
+export function openRoom(roomUrlName: string, ownerUsername: string) {
   const db = getDb();
   const result = db.prepare(
     `
-    UPDATE rooms SET isOpen = ? WHERE name = ? AND ownerUsername = ?;
+    UPDATE rooms SET isOpen = ? WHERE urlName = ? AND ownerUsername = ?;
     `,
-  ).run(true, roomName, ownerUsername);
+  ).run(true, roomUrlName, ownerUsername);
   return result !== 0;
 }
 

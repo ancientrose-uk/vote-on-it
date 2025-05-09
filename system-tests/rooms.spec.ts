@@ -68,7 +68,13 @@ describe("Login Tests", () => {
         "Waiting for host to start voting session.",
       );
 
-      await hostBrowser.clickButton(`Start Voting Session ${roomName}`);
+      await hostBrowser.clickLink(roomUrl);
+
+      expect(await hostBrowser.getCurrentUri()).toEqual(path);
+
+      await hostBrowser.clickButton(`Start Voting Session`);
+
+      expect(await hostBrowser.getCurrentUri()).toEqual(path);
 
       const votingStartedMessage = "Voting session started.";
 
@@ -84,6 +90,25 @@ describe("Login Tests", () => {
         firstGuestBrowser,
         votingStartedMessage,
       );
+    });
+    it("should not allow guests to start voting", async () => {
+      const roomName = generateUniqueTestRoomName();
+      const { browserFns: hostBrowser } = await getBrowserPage(
+        testScope.baseUrl || "NO BASE URL",
+      );
+      const { roomUrl } = await loginAndCreateRoom(
+        hostBrowser,
+        roomName,
+        "testuser",
+        "testpassword",
+      );
+      await hostBrowser.clickLink(roomUrl);
+      const { browserFns: guestBrowser } = await getBrowserPage(roomUrl);
+
+      expect(await hostBrowser.hasElement("button", "Start Voting Session"))
+        .toBe(true);
+      expect(await guestBrowser.hasElement("button", "Start Voting Session"))
+        .not.toBe(true);
     });
     it("should allow multiple hosts to create multiple rooms", async () => {
       const hosts = await Promise.all(
@@ -123,8 +148,9 @@ describe("Login Tests", () => {
         throw new Error("This should never be hit");
       }
 
-      firstHost.browserFns.clickButton(
-        `Start Voting Session ${firstHost.roomName}`,
+      await firstHost.browserFns.clickLink(firstHost.roomUrl);
+      await firstHost.browserFns.clickButton(
+        `Start Voting Session`,
       );
       await Promise.all(firstHost.guestBrowsers.map(async (guestBrowser) => {
         expect(await guestBrowser.browserFns.getHeading(1)).toEqual(

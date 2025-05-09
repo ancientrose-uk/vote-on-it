@@ -8,7 +8,7 @@ import {
   NotFoundPage,
   RoomPage,
 } from "./components.tsx";
-import { getPublicUrl } from "../lib/utils.ts";
+import { getFullRoomUrlFromUrlName } from "../lib/utils.ts";
 import {
   createRoom,
   getLatestRoomNameForOwnerName,
@@ -136,8 +136,7 @@ const routes: Routes = {
         );
         if (urlName) {
           state.roomName = latestRoomName;
-          state.roomUrl = getPublicUrl() +
-            `/room/${encodeURIComponent(urlName)}`;
+          state.roomUrl = getFullRoomUrlFromUrlName(urlName);
         }
       }
 
@@ -166,45 +165,55 @@ const routes: Routes = {
   "/open-room": {
     POST: async ({ req, requestAuthContext }) => {
       const formData = await req.formData();
-      const roomName = formData.get("roomName");
+      const roomUrlName = formData.get("roomUrlName");
       const user = requestAuthContext.getUser();
-      if (typeof roomName !== "string") {
+      if (typeof roomUrlName !== "string") {
         return redirect("/account?error=room-name-empty");
       }
       if (!user) {
         return redirect("/account?error=not-logged-in");
       }
-      const roomUrlName = getUrlForRoomNameAndOwner(roomName, user.username);
+      console.log({
+        roomName: roomUrlName,
+        user: user.username,
+      });
       if (!roomUrlName) {
-        return redirect("/account?error=room-name-not-found");
+        return redirect("/account?error=room-name-not-found-a");
       }
-      const result = openRoom(roomName, user.username);
+      const result = openRoom(roomUrlName, user.username);
       if (result) {
         roomEvents.emit(`room-${roomUrlName}`, {
           isOpen: true,
-          name: roomName,
+          name: roomUrlName,
         });
-        return redirect("/account");
+        return redirect(getFullRoomUrlFromUrlName(roomUrlName));
       }
-      return redirect("/account?error=room-name-not-found");
+      return redirect("/account?error=room-name-not-found-b");
     },
   },
   "/room/:urlName": {
-    GET: ({ urlParams }) => {
+    GET: ({ urlParams, requestAuthContext }) => {
       const { urlName } = urlParams;
       if (!urlName) {
         return redirect("/");
       }
       const roomName = roomNameByUrlName(urlName);
       const isOpen = isRoomOpenByUrlName(urlName);
+      const user = requestAuthContext.getUser();
       if (!roomName) {
         return redirect("/");
       }
+      const userIsOwner = user &&
+        getUrlForRoomNameAndOwner(roomName, user.username) === urlName; // long winded way of handling it but I'm planning to look at database layer changes later
       const state = {
         roomName: roomName,
-        statusMessage: getStatusMessageText(!!isOpen),
+        statusMessageInput: getStatusMessageText(!!isOpen),
         roomUrlName: urlName,
+        fullRoomUrl: getFullRoomUrlFromUrlName(urlName),
+        userIsOwner: !!userIsOwner,
+        roomOpenAtLoad: !!isOpen,
       };
+      console.log("room state", state);
       return wrapReactElem(RoomPage(state), state);
     },
   },
