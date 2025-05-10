@@ -26,9 +26,19 @@ async function runBuild() {
     buildAndWriteClientCss(),
   ]);
 
+  await writeLatUpdatedFile();
+
   console.log("");
   console.log(`build completed in [${Date.now() - start}]ms`);
   console.log("");
+}
+
+async function writeLatUpdatedFile() {
+  const publicDirDate = await recursivelyGetMaxUpdatedDate(publicDir);
+  const file = pathJoin(publicDir, "last-updated.txt");
+  const contents = publicDirDate.maxDate.getTime() + "\n";
+  console.log("writing file", file, contents);
+  await Deno.writeTextFile(file, contents);
 }
 
 async function cleanPublicDir() {

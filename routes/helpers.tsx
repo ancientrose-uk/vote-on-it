@@ -1,7 +1,24 @@
 import { renderToString } from "react-dom/server";
 import React from "react";
+import { pathJoin, publicDir } from "../lib/paths.ts";
 
-const serverStartTime = Date.now(); // todo, replace this with the latest build time.
+let lastBuildTime = "";
+try {
+  lastBuildTime = await getLastBuildTime();
+} catch (e) {
+  console.error("Error reading last build time", e);
+  throw new Error(
+    "Error reading last build time, this might mean the build wasn't performed",
+  );
+}
+
+setInterval(async () => {
+  try {
+    lastBuildTime = await getLastBuildTime();
+  } catch (e) {
+    console.error("Error reading last build time", e);
+  }
+}, 5000);
 
 export function redirect(url: string, status = 302): Response {
   return new Response(renderToString(<a href={url} />), {
@@ -23,14 +40,14 @@ export function wrapReactElem(
       <head>
         <title>Vote On It!</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <link rel="stylesheet" href="/static/output.css?cb=${serverStartTime}" />
+        <link rel="stylesheet" href="/static/output.css?cb=${lastBuildTime}" />
       </head>
       <body class="ml-16 mr-16">
         <div id="root">${html}</div>
         <script>
           window.__INITIAL_STATE__ = ${JSON.stringify(initialState)};
         </script>
-        <script type="module" src="/static/client.js?cb=${serverStartTime}"></script>
+        <script type="module" src="/static/client.js?cb=${lastBuildTime}"></script>
       </body>
     </html>`,
     {
@@ -51,4 +68,8 @@ export function getErrorMessage(req: Request, missingFields: string[] = []) {
     default:
       return "";
   }
+}
+
+async function getLastBuildTime() {
+  return await Deno.readTextFile(pathJoin(publicDir, "last-updated.txt"));
 }
