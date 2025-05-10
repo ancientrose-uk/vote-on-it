@@ -157,6 +157,12 @@ describe("Rooms", () => {
       await allBrowsersPromise;
 
       await Promise.all([
+        firstGuestBrowser.assertThatTheVotingButtonsAreDifferentColors(),
+        secondGuestBrowser.assertThatTheVotingButtonsAreDifferentColors(),
+        thirdGuestBrowser.assertThatTheVotingButtonsAreDifferentColors(),
+        fourthGuestBrowser.assertThatTheVotingButtonsAreDifferentColors(),
+      ]);
+      await Promise.all([
         firstGuestBrowser.clickButton("For"),
         secondGuestBrowser.clickButton("Against"),
         thirdGuestBrowser.clickButton("Abstain"),
