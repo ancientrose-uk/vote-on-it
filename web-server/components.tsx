@@ -241,9 +241,16 @@ function getVoteProgressElement(
     currentVote.alreadyVoted.length,
   ];
   const firstTotal = totals[0];
-  if (totals.some((total) => total || 0 !== firstTotal || 0)) {
+  const checkAgainstTotal = (total: number) =>
+    (total || 0) !== (firstTotal || 0);
+  if (totals.some(checkAgainstTotal)) {
     console.error("!!!!!");
-    console.error("Totals diverged", totals);
+    console.error(
+      "Totals diverged",
+      firstTotal,
+      totals,
+      totals.map(checkAgainstTotal),
+    );
     console.error("!!!!!");
   }
   const totalVotes = stats.totalVotes || 0;
@@ -469,7 +476,6 @@ export function RoomPage(
     roomName,
     roomUrlName,
     fullRoomUrl,
-    isClientSide,
     statusMessageInput,
     userIsOwner,
     roomOpenAtLoad,
@@ -482,7 +488,6 @@ export function RoomPage(
     roomName: string;
     roomUrlName: string;
     fullRoomUrl: string;
-    isClientSide?: boolean;
     statusMessageInput: string;
     userIsOwner: boolean;
     roomOpenAtLoad: boolean;
@@ -503,36 +508,34 @@ export function RoomPage(
   const [previousVoteSummary, setPreviousVoteSummary] = useState(
     initialPreviousVoteSummary,
   );
-  if (isClientSide === true) {
-    useEffect(() => {
-      const eventSource = new EventSource(
-        `/api/room/${encodeURIComponent(roomUrlName)}/events`,
-      );
-      eventSource.onmessage = (event: { data: string }) => {
-        const data: GuestRoomEventData | HostRoomStatsData | PreviousVoteStats =
-          JSON.parse(
-            event.data,
-          );
-        if (data.type === "GUEST_ROOM_EVENT") {
-          setRoomStatusMessage(data.statusMessage);
-          setIsOpen(data.isOpen);
-          setCurrentVote(data.currentVote);
-          const hasVoted = data.currentVote?.alreadyVoted.includes(voterId) ||
-            false;
-          setHasAlreadyVotedInThisVote(hasVoted);
-        }
-        if (data.type === "PREVIOUS_VOTE_SUMMARY") {
-          setPreviousVoteSummary(data.previousVoteSummary);
-        }
-        if (userIsOwner && data.type === "HOST_ROOM_STATS") {
-          setStats(data.currentStats);
-        }
-      };
-      return () => {
-        eventSource.close();
-      };
-    }, []);
-  }
+  useEffect(() => {
+    const eventSource = new EventSource(
+      `/api/room/${encodeURIComponent(roomUrlName)}/events`,
+    );
+    eventSource.onmessage = (event: { data: string }) => {
+      const data: GuestRoomEventData | HostRoomStatsData | PreviousVoteStats =
+        JSON.parse(
+          event.data,
+        );
+      if (data.type === "GUEST_ROOM_EVENT") {
+        setRoomStatusMessage(data.statusMessage);
+        setIsOpen(data.isOpen);
+        setCurrentVote(data.currentVote);
+        const hasVoted = data.currentVote?.alreadyVoted.includes(voterId) ||
+          false;
+        setHasAlreadyVotedInThisVote(hasVoted);
+      }
+      if (data.type === "PREVIOUS_VOTE_SUMMARY") {
+        setPreviousVoteSummary(data.previousVoteSummary);
+      }
+      if (userIsOwner && data.type === "HOST_ROOM_STATS") {
+        setStats(data.currentStats);
+      }
+    };
+    return () => {
+      eventSource.close();
+    };
+  }, []);
   return (
     <div>
       <h1 className={headingClasses}>Welcome to the room: {roomName}</h1>

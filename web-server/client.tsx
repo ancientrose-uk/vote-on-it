@@ -19,9 +19,7 @@ const router = createBrowserRouter([
     path: "/account",
     element: (
       <AccountPage
-        username={initialState.username}
-        roomName={initialState.roomName}
-        roomUrl={initialState.roomUrl}
+        {...initialState}
       />
     ),
   },
@@ -29,8 +27,7 @@ const router = createBrowserRouter([
     path: "/login",
     element: (
       <LoginPage
-        error={initialState.error}
-        prefilledUsername={initialState.prefilledUsername}
+        {...initialState}
       />
     ),
   },
@@ -38,25 +35,17 @@ const router = createBrowserRouter([
     path: "/room/:urlName",
     element: (
       <RoomPage
-        roomName={initialState.roomName}
-        roomUrlName={initialState.roomUrlName}
-        fullRoomUrl={initialState.fullRoomUrl}
-        isClientSide
-        statusMessageInput={initialState.statusMessageInput}
-        userIsOwner={initialState.userIsOwner}
-        roomOpenAtLoad={initialState.roomOpenAtLoad}
-        initialCurrentVote={initialState.initialCurrentVote}
-        initialStats={initialState.initialStats}
-        initialHasAlreadyVotedInThisVote={initialState
-          .initialHasAlreadyVotedInThisVote}
-        voterId={initialState.voterId}
-        initialPreviousVoteSummary={initialState.initialPreviousVoteSummary}
+        {...initialState}
       />
     ),
   },
   {
     path: "*",
-    element: <NotFoundPage />,
+    element: (
+      <NotFoundPage
+        {...initialState}
+      />
+    ),
   },
 ]);
 
