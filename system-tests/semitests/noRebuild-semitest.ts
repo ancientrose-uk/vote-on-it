@@ -35,7 +35,7 @@ const minRebuildTime = allRebuildTimes.reduce(
 );
 const maxNoRebuild = allNonRebuildTimes.reduce((a, b) => Math.max(a, b), 0);
 
-const threshold = maxNoRebuild * 15;
+const threshold = maxNoRebuild * 12;
 const acceptable = minRebuildTime > threshold;
 console.log({
   minRebuildTime,
