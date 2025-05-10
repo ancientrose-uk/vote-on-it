@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   buttonClasses,
   headingClasses,
@@ -10,6 +10,7 @@ import {
 export function LoginPage(
   { error = "", prefilledUsername = "" },
 ) {
+  const [username, setUsername] = useState(prefilledUsername);
   return (
     <div className="max-w-md mx-auto p-8">
       <h1 className={headingClasses}>
@@ -32,24 +33,15 @@ export function LoginPage(
           >
             Username
           </label>
-          {prefilledUsername
-            ? (
-              <input
-                type="text"
-                id="username"
-                name="username"
-                value={prefilledUsername}
-                className={normalInputClasses}
-              />
-            )
-            : (
-              <input
-                type="text"
-                id="username"
-                name="username"
-                className={normalInputClasses}
-              />
-            )}
+
+          <input
+            type="text"
+            id="username"
+            name="username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            className={normalInputClasses}
+          />
         </div>
         <div className="mb-6">
           <label

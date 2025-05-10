@@ -77,6 +77,13 @@ describe("Login Tests", () => {
       "Please enter your password",
     );
     expect(await browserFns.getFieldValue("username")).toBe("testuser");
+
+    // make sure the username is still editable
+
+    await browserFns.fillFormWith({
+      username: "who-am-i",
+    });
+    expect(await browserFns.getFieldValue("username")).toBe("who-am-i");
   });
   it("helpful message when user doesn't enter username", async () => {
     const { baseUrl } = await startServer();

@@ -3,7 +3,6 @@ import {
   getErrorMessage,
   playgroundWrapReactElem,
   redirect,
-  wrapReactElem,
 } from "./helpers.tsx";
 import { LoginPage } from "../lib/components/LoginPage.tsx";
 
@@ -35,8 +34,8 @@ export const loginRoutes: Routes = {
           error: getErrorMessage(req, missingFields),
           prefilledUsername: typeof username === "string" ? username : "",
         };
-        return wrapReactElem(
-          LoginPage(state),
+        return playgroundWrapReactElem(
+          LoginPage,
           state,
         );
       }
