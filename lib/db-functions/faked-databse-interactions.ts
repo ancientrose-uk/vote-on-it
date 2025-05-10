@@ -5,6 +5,13 @@ const currentStatsByRoomUrlName: Record<string, CurrentStats> = {};
 const previousVoteSummaryByRoomUrlName: Record<string, CurrentStats> = {};
 const currentUserListByRoomUrlName: Record<string, Set<VoterId>> = {};
 
+function deepClone<T>(obj: T): T {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+  return JSON.parse(JSON.stringify(obj));
+}
+
 export function clearPreviousVoteSummary(
   roomUrlName: string,
 ) {
@@ -21,7 +28,7 @@ export function setCurrentVoteByRoomUrlName(
 export function getCurrentVoteByRoomUrlName(
   roomUrlName: string,
 ): CurrentVote | undefined {
-  return currentVoteByRoomUrlName[roomUrlName];
+  return deepClone(currentVoteByRoomUrlName[roomUrlName]);
 }
 
 export function moveCurrentVoteToPreviousVote(
@@ -36,22 +43,32 @@ export function moveCurrentVoteToPreviousVote(
     previousVoteSummaryByRoomUrlName[roomUrlName].question =
       currentVoteForRoom.questionText;
   }
-
   delete currentVoteByRoomUrlName[roomUrlName];
-  return getCurrentStatsByRoomUrlName(roomUrlName);
+  clearCurrentStatsByRoomUrlName(roomUrlName);
+  return deepClone(getCurrentStatsByRoomUrlName(roomUrlName));
+}
+
+function clearCurrentStatsByRoomUrlName(roomUrlName: string) {
+  const state = currentStatsByRoomUrlName[roomUrlName];
+  if (state) {
+    state.totalVotes = 0;
+    state.votedAgainst = 0;
+    state.votedFor = 0;
+    state.abstained = 0;
+  }
 }
 
 export function getPreviousVoteSummaryByRoomUrlName(
   roomUrlName: string,
 ): CurrentStats | undefined {
-  return previousVoteSummaryByRoomUrlName[roomUrlName];
+  return deepClone(previousVoteSummaryByRoomUrlName[roomUrlName]);
 }
 
 export function getCurrentStatsByRoomUrlName(
   roomUrlName: string,
 ): CurrentStats | undefined {
   ensureRoomHasVotingStats(roomUrlName);
-  return currentStatsByRoomUrlName[roomUrlName];
+  return deepClone(currentStatsByRoomUrlName[roomUrlName]);
 }
 
 function ensureRoomHasVotingStats(roomUrlName: string) {
@@ -95,4 +112,39 @@ export function removeVoterIdToGuestsInRoom(
   ensureRoomHasVotingStats(roomUrlName);
   currentUserListByRoomUrlName[roomUrlName].delete(voterId);
   ensureTotalAtendeeCountMatchesInUserListAndStats(roomUrlName);
+}
+
+export function validateAndRegisterVote(
+  roomUrlName: string,
+  voterId: VoterId,
+  vote: "votedFor" | "votedAgainst" | "abstained",
+) {
+  ensureRoomHasVotingStats(roomUrlName);
+  const currentVote = getCurrentVoteByRoomUrlName(roomUrlName);
+  if (!currentVote) {
+    return {
+      wasAllowedToVote: false,
+    };
+  }
+  if (currentVote.alreadyVoted.includes(voterId)) {
+    return {
+      wasAllowedToVote: false,
+    };
+  }
+  currentVote.alreadyVoted.push(voterId);
+  currentStatsByRoomUrlName[roomUrlName].totalVotes++;
+  switch (vote) {
+    case "votedFor":
+      currentStatsByRoomUrlName[roomUrlName].votedFor++;
+      break;
+    case "votedAgainst":
+      currentStatsByRoomUrlName[roomUrlName].votedAgainst++;
+      break;
+    case "abstained":
+      currentStatsByRoomUrlName[roomUrlName].abstained++;
+      break;
+  }
+  return {
+    wasAllowedToVote: true,
+  };
 }

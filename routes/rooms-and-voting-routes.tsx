@@ -29,6 +29,7 @@ import {
   moveCurrentVoteToPreviousVote,
   removeVoterIdToGuestsInRoom,
   setCurrentVoteByRoomUrlName,
+  validateAndRegisterVote,
 } from "../lib/db-functions/faked-databse-interactions.ts";
 
 export const roomsAndVotingRoutes: Routes = {
@@ -152,16 +153,10 @@ export const roomsAndVotingRoutes: Routes = {
       if (currentVoteForRoom?.voteId !== voteId) {
         return redirect("/?error=vote-id-doesnt-match");
       }
-      const state = moveCurrentVoteToPreviousVote(
+      moveCurrentVoteToPreviousVote(
         roomUrlName,
         currentVoteForRoom,
       );
-      if (state) {
-        state.totalVotes = 0;
-        state.votedAgainst = 0;
-        state.votedFor = 0;
-        state.abstained = 0;
-      }
       emitGuestRoomEvent(roomUrlName, {
         type: "GUEST_ROOM_EVENT",
         isOpen: true,
@@ -225,22 +220,21 @@ export const roomsAndVotingRoutes: Routes = {
       if (!roomUrlName) {
         return redirect("/?error=room-not-found");
       }
-      const currentVote = getCurrentVoteByRoomUrlName(roomUrlName);
-      const voteStats = getCurrentStatsByRoomUrlName(roomUrlName);
-      if (!currentVote || !voteStats) {
-        return redirect(req.url + "?error=vote-not-found");
-      }
-      const alreadyVoted = currentVote.alreadyVoted;
-      if (alreadyVoted.includes(voterId)) {
+      const { wasAllowedToVote } = validateAndRegisterVote(
+        roomUrlName,
+        voterId,
+        vote,
+      );
+      if (!wasAllowedToVote) {
         return redirect(req.url + "?error=already-voted");
       }
-      if (!voterId) {
-        throw new Error("No voter id, wtf?");
+
+      const currentStatsByRoomUrlName = getCurrentStatsByRoomUrlName(
+        roomUrlName,
+      );
+      if (currentStatsByRoomUrlName) {
+        emitHostRoomStats(roomUrlName, currentStatsByRoomUrlName);
       }
-      alreadyVoted.push(voterId);
-      voteStats.totalVotes += 1;
-      voteStats[vote] += 1;
-      emitHostRoomStats(roomUrlName, voteStats);
       emitPreviousGuestStats(roomUrlName);
       return redirect(req.url);
     },

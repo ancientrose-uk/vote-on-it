@@ -5,15 +5,18 @@ make.
 The goal for this cleanup is:
 
 - [x] Fix some React integration issues
-- [ ] Make the event model easier to comprehend and use
+- [(chosen not to do right now)] Make the event model easier to comprehend and
+  use
 - [x] Break the big files down
 - [x] Look into why the build step re-runs when it doesn't need to
-- [ ] Improve the database access - it's a synchronous part of a very async
+- [x] Improve the database access - it's a synchronous part of a very async
       system and I'm making lots of individual calls to it
 
 Potential stretch goals (probably for a later phase of house-keeping, but could
 be included here):
 
-- [ ] Add a design system
-- [ ] Get rid of the few remaining `any` and `Function` types
-- [ ] Introduce a DAO to allow easy switching between different databases
+- [(chosen not to do right now)] Add a design system
+- [(chosen not to do right now)] Get rid of the few remaining `any` and
+  `Function` types
+- [(chosen not to do right now)] Introduce a DAO to allow easy switching between
+  different databases
