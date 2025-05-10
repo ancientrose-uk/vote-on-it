@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   CurrentStats,
   CurrentVote,
@@ -493,10 +493,6 @@ export function RoomPage(
     initialPreviousVoteSummary?: CurrentStats;
   },
 ) {
-  const useState = isClientSide === true
-    ? React.useState
-    : (<T,>(result: T): [T, () => void] => [result, () => {}]);
-
   const [statusMessage, setRoomStatusMessage] = useState(statusMessageInput);
   const [isOpen, setIsOpen] = useState(roomOpenAtLoad);
   const [stats, setStats] = useState(initialStats);

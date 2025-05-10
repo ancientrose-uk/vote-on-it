@@ -29,6 +29,14 @@ export function redirect(url: string, status = 302): Response {
   });
 }
 
+// deno-lint-ignore no-explicit-any
+export function playgroundWrapReactElem<T extends Record<string, any>>(
+  Component: React.ComponentType<T>,
+  props: T,
+): Response {
+  return wrapReactElem(<Component {...props} />, props);
+}
+
 export function wrapReactElem(
   reactElement: React.JSX.Element,
   initialState = {},
@@ -71,5 +79,7 @@ export function getErrorMessage(req: Request, missingFields: string[] = []) {
 }
 
 async function getLastBuildTime() {
-  return await Deno.readTextFile(pathJoin(publicDir, "last-updated.txt"));
+  return await Deno.readTextFile(pathJoin(publicDir, "last-updated.txt")).then(
+    (x) => x.trim(),
+  ).catch(() => "" + Math.random());
 }

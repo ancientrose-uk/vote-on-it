@@ -20,7 +20,7 @@ import {
   HostRoomStatsData,
   VoterId,
 } from "../lib/events.ts";
-import { redirect, wrapReactElem } from "./helpers.tsx";
+import { playgroundWrapReactElem, redirect } from "./helpers.tsx";
 import { getFullRoomUrlFromUrlName } from "../lib/utils.ts";
 import { RoomPage } from "../web-server/components.tsx";
 
@@ -214,8 +214,9 @@ export const roomsAndVotingRoutes: Routes = {
         initialHasAlreadyVotedInThisVote: userAlreadyVoted,
         initialPreviousVoteSummary: previousVoteSummaryByRoomUrlName[urlName],
         voterId,
+        abc: "def",
       };
-      return wrapReactElem(RoomPage(state), state);
+      return playgroundWrapReactElem(RoomPage, state);
     },
     POST: async ({ req, requestAuthContext, urlParams }) => {
       const { urlName: roomUrlName } = urlParams;

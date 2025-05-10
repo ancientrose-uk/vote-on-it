@@ -3,8 +3,7 @@ import {
   getUrlForRoomNameAndOwner,
 } from "../lib/database-access.ts";
 
-"/account";
-import { redirect, wrapReactElem } from "./helpers.tsx";
+import { playgroundWrapReactElem, redirect } from "./helpers.tsx";
 import { getFullRoomUrlFromUrlName } from "../lib/utils.ts";
 import { AccountPage } from "../web-server/components.tsx";
 import { Routes } from "../lib/types.ts";
@@ -31,7 +30,7 @@ export const accountRoutes: Routes = {
         }
       }
 
-      return wrapReactElem(AccountPage(state), state);
+      return playgroundWrapReactElem(AccountPage, state);
     },
   },
 };

@@ -1,14 +1,19 @@
 import { LoginPage } from "../web-server/components.tsx";
 import { Routes } from "../lib/types.ts";
-import { getErrorMessage, redirect, wrapReactElem } from "./helpers.tsx";
+import {
+  getErrorMessage,
+  playgroundWrapReactElem,
+  redirect,
+  wrapReactElem,
+} from "./helpers.tsx";
 
 export const loginRoutes: Routes = {
   "/login": {
     GET: ({ req }) => {
-      const model = {
+      const state = {
         error: getErrorMessage(req),
       };
-      return wrapReactElem(LoginPage(model), model);
+      return playgroundWrapReactElem(LoginPage, state);
     },
     POST: async ({ req, requestAuthContext }) => {
       const formData = await req.formData();
