@@ -1,7 +1,7 @@
 import React from "react";
-import { Routes } from "../lib/types.ts";
+import { RouteHandler, Routes } from "../lib/types.ts";
 import { wrapReactElem } from "./helpers.tsx";
-import { HomePage } from "../web-server/components.tsx";
+import { HomePage, NotFoundPage } from "../web-server/components.tsx";
 
 export const staticRoutes: Routes = {
   "/": {
@@ -9,4 +9,8 @@ export const staticRoutes: Routes = {
       return wrapReactElem(<HomePage />);
     },
   },
+};
+
+export const defaultHandler: RouteHandler = () => {
+  return wrapReactElem(<NotFoundPage />);
 };

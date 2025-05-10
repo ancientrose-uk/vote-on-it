@@ -1,8 +1,9 @@
 import { getPort, setRunningPort, verboseLog } from "../lib/utils.ts";
-import { defaultHandler, lookupRoute } from "./routes.tsx";
+import { lookupRoute } from "./routes.tsx";
 import { AuthHandler } from "../lib/AuthHandler.ts";
 import { serveFile } from "jsr:@std/http/file-server";
 import path from "node:path";
+import { defaultHandler } from "../routes/static-routes.tsx";
 
 const dirname = path.dirname(new URL(import.meta.url).pathname);
 

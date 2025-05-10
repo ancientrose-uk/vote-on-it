@@ -6,7 +6,7 @@ The goal for this cleanup is:
 
 - [(partial)] Fix some React integration issues
 - [ ] Make the event model easier to comprehend and use
-- [ ] Break the big files down
+- [x] Break the big files down
 - [x] Look into why the build step re-runs when it doesn't need to
 - [ ] Improve the database access - it's a synchronous part of a very async
       system and I'm making lots of individual calls to it
