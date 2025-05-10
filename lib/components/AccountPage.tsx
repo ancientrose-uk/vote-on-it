@@ -1,6 +1,7 @@
 import React from "react";
 import {
   buttonClasses,
+  errorMessageClasses,
   headingClasses,
   normalFormClasses,
   normalInputClasses,
@@ -10,10 +11,11 @@ import {
 import { getLatestRoomDisplay } from "./getLatestRoomDisplay.tsx";
 
 export function AccountPage(
-  { username, roomName, roomUrl }: {
+  { username, roomName, roomUrl, errorMessage }: {
     username: string;
     roomName?: string;
     roomUrl?: string;
+    errorMessage?: string;
   },
 ) {
   return (
@@ -27,6 +29,13 @@ export function AccountPage(
       </p>
       <form action="/create-room" method="POST" className={normalFormClasses}>
         <div className="mb-4">
+          {errorMessage
+            ? (
+              <p className={errorMessageClasses}>
+                {errorMessage}
+              </p>
+            )
+            : null}
           <label
             htmlFor="roomName"
             className={normalLabelClasses}

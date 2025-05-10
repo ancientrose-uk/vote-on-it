@@ -100,9 +100,9 @@ export const roomsAndVotingRoutes: Routes = {
       if (!user) {
         throw new Error("You need to be logged in to perform this action");
       }
-      // if (roomName.length === 0) {
-      //   return redirect("/account?error=room-name-empty");
-      // }
+      if (roomName.length === 0) {
+        return redirect("/account?error=room-name-empty");
+      }
       dbAccess.createRoom(roomName, user.username);
       return redirect("/account");
     },
