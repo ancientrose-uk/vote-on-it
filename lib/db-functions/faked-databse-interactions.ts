@@ -50,21 +50,8 @@ export function getPreviousVoteSummaryByRoomUrlName(
 export function getCurrentStatsByRoomUrlName(
   roomUrlName: string,
 ): CurrentStats | undefined {
-  ensureRoomHasCurrentStats(roomUrlName);
+  ensureRoomHasVotingStats(roomUrlName);
   return currentStatsByRoomUrlName[roomUrlName];
-}
-
-function ensureRoomHasCurrentStats(roomUrlName: string) {
-  if (!currentStatsByRoomUrlName[roomUrlName]) {
-    currentStatsByRoomUrlName[roomUrlName] = {
-      totalGuests: 0,
-      votedFor: 0,
-      votedAgainst: 0,
-      abstained: 0,
-      totalVotes: 0,
-      question: "",
-    };
-  }
 }
 
 function ensureRoomHasVotingStats(roomUrlName: string) {
