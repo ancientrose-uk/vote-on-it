@@ -45,6 +45,33 @@ describe("Rooms", () => {
       });
       testScope.baseUrl = baseUrl;
     });
+    it("should protect against empty room names", async () => {
+      const { browserFns: hostBrowser } = await getBrowserPage(
+        testScope.baseUrl || "NO BASE URL",
+      );
+
+      await hostBrowser.logInUser("testuser", "testpassword");
+      await hostBrowser.assertCurrentUriIs("/account");
+      expect(await hostBrowser.hasElement(".errorMessage"))
+        .not.toBe(true);
+
+      // don't fill in the room name
+      await hostBrowser.clickButton("Create Room");
+      expect(await hostBrowser.getErrorMessage()).toEqual(
+        "Please enter a room name",
+      );
+      expect(await hostBrowser.hasElement(".errorMessage"))
+        .toBe(true);
+      expect((await hostBrowser.getCurrentUri()).split("?")[0]).toEqual(
+        "/account",
+      );
+
+      expect(await hostBrowser.getFieldValue("roomName")).toEqual("");
+      await hostBrowser.fillFormWith({
+        roomName: "something",
+      });
+      expect(await hostBrowser.getFieldValue("roomName")).toEqual("something");
+    });
     it("logged in user can open a named room and logged out user can join it and see updates", async () => {
       const roomName = generateUniqueTestRoomName();
       const { browserFns: hostBrowser } = await getBrowserPage(

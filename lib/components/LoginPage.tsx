@@ -1,6 +1,7 @@
 import React from "react";
 import {
   buttonClasses,
+  errorMessageClasses,
   headingClasses,
   normalFormClasses,
   normalInputClasses,
@@ -16,7 +17,7 @@ export function LoginPage(
         Log in to your account
       </h1>
       {error && (
-        <p className="errorMessage bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+        <p className={errorMessageClasses}>
           {error}
         </p>
       )}

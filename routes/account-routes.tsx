@@ -10,13 +10,20 @@ import { AccountPage } from "../lib/components/AccountPage.tsx";
 
 export const accountRoutes: Routes = {
   "/account": {
-    GET: ({ requestAuthContext }) => {
+    GET: ({ requestAuthContext, req }) => {
       const user = requestAuthContext.getUser();
+      const errorMessage = getErrorMessage(req);
       if (!user) {
         return redirect("/login");
       }
-      const state: { username: string; roomUrl?: string; roomName?: string } = {
+      const state: {
+        username: string;
+        roomUrl?: string;
+        roomName?: string;
+        errorMessage?: string;
+      } = {
         username: user.username,
+        errorMessage,
       };
       const latestRoomName = getLatestRoomNameForOwnerName(user.username);
       if (latestRoomName) {
@@ -34,3 +41,17 @@ export const accountRoutes: Routes = {
     },
   },
 };
+
+export function getErrorMessage(req: Request) {
+  const url = new URL(req.url);
+  const error = url.searchParams.get("error");
+  if (!error) {
+    return undefined;
+  }
+  switch (error) {
+    case "room-name-empty":
+      return `Please enter a room name`;
+    default:
+      return `Unknown error: ${error}`;
+  }
+}
