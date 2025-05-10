@@ -1,15 +1,8 @@
 import React from "react";
-import {
-  AccountPage,
-  HomePage,
-  NotFoundPage,
-  RoomPage,
-} from "./components.tsx";
+import { HomePage, NotFoundPage, RoomPage } from "./components.tsx";
 import { getFullRoomUrlFromUrlName } from "../lib/utils.ts";
 import {
   createRoom,
-  getLatestRoomNameForOwnerName,
-  getUrlForRoomNameAndOwner,
   isRoomOpenByUrlName,
   isUserOwnerOfRoom,
   openRoom,
@@ -32,6 +25,7 @@ import { randomUUID } from "node:crypto";
 import { RouteHandler, Routes } from "../lib/types.ts";
 import { redirect, wrapReactElem } from "../routes/helpers.tsx";
 import { loginRoutes } from "../routes/login-routes.tsx";
+import { account } from "../routes/account-routes.tsx";
 
 const currentVoteByRoomUrlName: Record<string, CurrentVote> = {};
 const currentStatsByRoomUrlName: Record<string, CurrentStats> = {};
@@ -85,30 +79,7 @@ const routes: Routes = {
     },
   },
   ...loginRoutes,
-  "/account": {
-    GET: ({ requestAuthContext }) => {
-      const user = requestAuthContext.getUser();
-      if (!user) {
-        return redirect("/login");
-      }
-      const state: { username: string; roomUrl?: string; roomName?: string } = {
-        username: user.username,
-      };
-      const latestRoomName = getLatestRoomNameForOwnerName(user.username);
-      if (latestRoomName) {
-        const urlName = getUrlForRoomNameAndOwner(
-          latestRoomName,
-          user.username,
-        );
-        if (urlName) {
-          state.roomName = latestRoomName;
-          state.roomUrl = getFullRoomUrlFromUrlName(urlName);
-        }
-      }
-
-      return wrapReactElem(AccountPage(state), state);
-    },
-  },
+  ...account,
   "/request-vote": {
     POST: async ({ req, requestAuthContext }) => {
       const formData = await req.formData();
