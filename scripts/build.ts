@@ -15,8 +15,8 @@ async function runBuild() {
     "public",
     ".persistence",
   ]);
-  const publicDirDate = await recursivelyGetMaxUpdatedDate(publicDir);
-  if (buildFilesDate.maxDate < publicDirDate.maxDate) {
+  const publicDirDate = await getLastUpdatedFromUpdatedFile();
+  if (buildFilesDate.maxDate.getTime() < publicDirDate) {
     return;
   }
 
@@ -39,6 +39,12 @@ async function writeLatUpdatedFile() {
   const contents = publicDirDate.maxDate.getTime() + "\n";
   console.log("writing file", file, contents);
   await Deno.writeTextFile(file, contents);
+}
+async function getLastUpdatedFromUpdatedFile() {
+  const file = pathJoin(publicDir, "last-updated.txt");
+  return await Deno.readTextFile(file).then((str) => Number(str.trim())).catch(
+    () => 0,
+  );
 }
 
 async function cleanPublicDir() {
