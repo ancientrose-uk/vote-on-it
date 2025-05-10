@@ -1,4 +1,4 @@
-name: Typecheck & Lint
+name: Check, Lint & Semitest
 
 on:
   push:
@@ -35,3 +35,9 @@ jobs:
 
       - name: Run Format check
         run: deno fmt --check
+
+      - name: Run lockfile test
+        run: deno task test:semitest:lockfile
+
+      - name: Run norebuild test
+        run: deno task test:semitest:no-rebuild

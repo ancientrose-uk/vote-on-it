@@ -41,6 +41,15 @@
         "build"
       ]
     },
+    "test:semitest:lockfile": {
+      "command": "deno run --allow-env=VOI__VERBOSE --allow-run system-tests/semitests/lockfile-semitest.ts"
+    },
+    "test:semitest:no-rebuild": {
+      "command": "deno run --allow-env=VOI__VERBOSE --allow-run system-tests/semitests/noRebuild-semitest.ts"
+    },
+    "test:semitest:all": {
+      "command": "deno task test:semitest:lockfile && deno task test:semitest:no-rebuild"
+    },
     "check:all": {
       "command": "deno check && deno lint && deno fmt --check"
     },

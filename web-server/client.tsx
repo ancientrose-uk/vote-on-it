@@ -2,13 +2,11 @@
 import React from "react";
 import { hydrateRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import {
-  AccountPage,
-  HomePage,
-  LoginPage,
-  NotFoundPage,
-  RoomPage,
-} from "./components.tsx";
+import { HomePage } from "../lib/components/HomePage.tsx";
+import { AccountPage } from "../lib/components/AccountPage.tsx";
+import { LoginPage } from "../lib/components/LoginPage.tsx";
+import { RoomPage } from "../lib/components/RoomPage.tsx";
+import { NotFoundPage } from "../lib/components/NotFoundPage.tsx";
 
 // deno-lint-ignore no-explicit-any
 const initialState = (window as any).__INITIAL_STATE__ || {};
@@ -19,9 +17,7 @@ const router = createBrowserRouter([
     path: "/account",
     element: (
       <AccountPage
-        username={initialState.username}
-        roomName={initialState.roomName}
-        roomUrl={initialState.roomUrl}
+        {...initialState}
       />
     ),
   },
@@ -29,8 +25,7 @@ const router = createBrowserRouter([
     path: "/login",
     element: (
       <LoginPage
-        error={initialState.error}
-        prefilledUsername={initialState.prefilledUsername}
+        {...initialState}
       />
     ),
   },
@@ -38,25 +33,17 @@ const router = createBrowserRouter([
     path: "/room/:urlName",
     element: (
       <RoomPage
-        roomName={initialState.roomName}
-        roomUrlName={initialState.roomUrlName}
-        fullRoomUrl={initialState.fullRoomUrl}
-        isClientSide
-        statusMessageInput={initialState.statusMessageInput}
-        userIsOwner={initialState.userIsOwner}
-        roomOpenAtLoad={initialState.roomOpenAtLoad}
-        initialCurrentVote={initialState.initialCurrentVote}
-        initialStats={initialState.initialStats}
-        initialHasAlreadyVotedInThisVote={initialState
-          .initialHasAlreadyVotedInThisVote}
-        voterId={initialState.voterId}
-        initialPreviousVoteSummary={initialState.initialPreviousVoteSummary}
+        {...initialState}
       />
     ),
   },
   {
     path: "*",
-    element: <NotFoundPage />,
+    element: (
+      <NotFoundPage
+        {...initialState}
+      />
+    ),
   },
 ]);
 

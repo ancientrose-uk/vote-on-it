@@ -139,5 +139,6 @@ dist
 .idea
 useful-snippets.*
 .persistence
-web-server/public/client.js
-web-server/public/output.css
+web-server/public/
+.build-lockfile
+.test-lockfile-lockfile:wq

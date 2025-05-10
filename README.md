@@ -11,14 +11,24 @@ Feel free to contribute, if you're going to contribute we recommend that you:
    (if not, you're welcome to fork the project and make the changes exactly as
    you want them)
 2. Clone the codebase and run `deno install && deno task test:browser:setup`
-3. When you're ready to make code changes run `deno run dev` which will start
-   the dev server and watch for file changes, the tests and build will run on
-   every file change. This script has a few options which are set through
-   environment variables:
-   - `VOI__PORT` (or just `PORT`) - The port to run the dev server on
-     (default: 3000)
-   - `VOI__DEV__AUTO_FIX_FORMATTING` - Set this to `true` to automatically fix
-     formatting issues (default: false)
+3. When you're ready to make code changes run `deno run dev server` and
+   `deno run dev tests` which will start the dev server or the tests and watch
+   for file changes, if you're short on screen space you can run them together
+   with `deno run dev all` but that can be a challenge to view. This script has
+   a few options which are set through environment variables:
+
+- `VOI__DEV__PORT` - The port to run the dev server on (default: 3000)
+- `VOI__DEV__AUTO_FIX_FORMATTING` - Set this to `true` to automatically fix
+  formatting issues (default: false)
+- `VOI__VERBOSE=true` - see _all_ the logs
+- `VOI__DEV__PRIORITY_TEST_TASK` - run one test run first, this is helpful when
+  you're focussed on one particular area e.e.g
+  `VOI__DEV__PRIORITY_TEST_TASK=test:browser:login`
+- `VOI__DEV__AUTO_FIX_FORMATTING` - set to `true` to have the formatter run
+  continuously - this can be quite disruptive
+- `VOI__DEV__PRIORITISE_TYPE_CHECKING` - set to `true` to run typechecking
+  first, otherwise it will run last
+
 4. You can set up Natalie's pre-commit hook if you want it, the instructions are
    in `scripts/natalies-pre-commit-hook.sh` alongside the script itself.
 5. Raise a Pull Request when you're starting to make progress to get some early
