@@ -4,7 +4,7 @@ make.
 
 The goal for this cleanup is:
 
-- [(partial)] Fix some React integration issues
+- [x] Fix some React integration issues
 - [ ] Make the event model easier to comprehend and use
 - [x] Break the big files down
 - [x] Look into why the build step re-runs when it doesn't need to
