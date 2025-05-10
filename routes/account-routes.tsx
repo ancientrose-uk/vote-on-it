@@ -5,8 +5,8 @@ import {
 
 import { playgroundWrapReactElem, redirect } from "./helpers.tsx";
 import { getFullRoomUrlFromUrlName } from "../lib/utils.ts";
-import { AccountPage } from "../web-server/components.tsx";
 import { Routes } from "../lib/types.ts";
+import { AccountPage } from "../lib/components/AccountPage.tsx";
 
 export const accountRoutes: Routes = {
   "/account": {

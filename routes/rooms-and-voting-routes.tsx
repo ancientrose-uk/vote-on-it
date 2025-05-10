@@ -19,7 +19,6 @@ import {
 } from "../lib/events.ts";
 import { playgroundWrapReactElem, redirect } from "./helpers.tsx";
 import { getFullRoomUrlFromUrlName } from "../lib/utils.ts";
-import { RoomPage } from "../web-server/components.tsx";
 import {
   addVoterIdToGuestsInRoom,
   clearPreviousVoteSummary,
@@ -31,6 +30,7 @@ import {
   setCurrentVoteByRoomUrlName,
   validateAndRegisterVote,
 } from "../lib/db-functions/faked-databse-interactions.ts";
+import { RoomPage } from "../lib/components/RoomPage.tsx";
 
 export const roomsAndVotingRoutes: Routes = {
   "/request-vote": {

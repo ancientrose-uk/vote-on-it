@@ -2,13 +2,11 @@
 import React from "react";
 import { hydrateRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import {
-  AccountPage,
-  HomePage,
-  LoginPage,
-  NotFoundPage,
-  RoomPage,
-} from "./components.tsx";
+import { HomePage } from "../lib/components/HomePage.tsx";
+import { AccountPage } from "../lib/components/AccountPage.tsx";
+import { LoginPage } from "../lib/components/LoginPage.tsx";
+import { RoomPage } from "../lib/components/RoomPage.tsx";
+import { NotFoundPage } from "../lib/components/NotFoundPage.tsx";
 
 // deno-lint-ignore no-explicit-any
 const initialState = (window as any).__INITIAL_STATE__ || {};

@@ -1,4 +1,3 @@
-import { LoginPage } from "../web-server/components.tsx";
 import { Routes } from "../lib/types.ts";
 import {
   getErrorMessage,
@@ -6,6 +5,7 @@ import {
   redirect,
   wrapReactElem,
 } from "./helpers.tsx";
+import { LoginPage } from "../lib/components/LoginPage.tsx";
 
 export const loginRoutes: Routes = {
   "/login": {
