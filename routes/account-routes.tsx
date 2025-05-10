@@ -9,7 +9,7 @@ import { getFullRoomUrlFromUrlName } from "../lib/utils.ts";
 import { AccountPage } from "../web-server/components.tsx";
 import { Routes } from "../lib/types.ts";
 
-export const account: Routes = {
+export const accountRoutes: Routes = {
   "/account": {
     GET: ({ requestAuthContext }) => {
       const user = requestAuthContext.getUser();
