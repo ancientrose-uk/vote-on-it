@@ -56,8 +56,8 @@ async function cleanPublicDir() {
 async function buildAndWriteClientJs() {
   const start = Date.now();
   console.log("starting client js build");
-  const result = await bundle("./web-server/client.tsx", {
-    importMap: "./import_map.json",
+  const result = await bundle(pathJoin(webserverDir, "client.tsx"), {
+    importMap: pathJoin(webserverDir, "import_map.json"),
     minify: false,
     compilerOptions: {
       jsx: "react",
@@ -67,7 +67,7 @@ async function buildAndWriteClientJs() {
   });
 
   await Deno.writeTextFile(
-    "./web-server/public/client.js",
+    pathJoin(publicDir, "client.js"),
     "// deno-lint-ignore-file\n" + result.code,
   );
   console.log(`finished client js build in [${Date.now() - start}]ms`);
