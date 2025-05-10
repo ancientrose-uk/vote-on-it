@@ -323,6 +323,38 @@ export async function getBrowserPage(
     return voteSummary;
   });
 
+  addBrowserFunction(
+    "assertThatTheVotingButtonsAreDifferentColors",
+    async () => {
+      const document = { querySelectorAll: (selector: string) => [selector] };
+      const window = {
+        getComputedStyle: (_button: string) => ({
+          backgroundColor: "this-is-just-to-keep-the-typechecker-happy",
+        }),
+      };
+      await browserFns.refreshPageWhenJsDisabled();
+      verboseLog("Checking that the voting buttons are different colors");
+      const buttonColors = await page.evaluate(() => {
+        const buttons = Array.from(document.querySelectorAll("button"));
+        return buttons.map((button) => {
+          return window.getComputedStyle(button).backgroundColor;
+        });
+      });
+
+      verboseLog("Button colors:", buttonColors);
+
+      const uniqueColors = new Set(buttonColors);
+      if (uniqueColors.size !== 3) {
+        throw new Error(
+          `Expected 3 unique colours, got [${uniqueColors.size}], voting buttons must have the same color - [${
+            buttonColors.join(", ")
+          }]`,
+        );
+      }
+      verboseLog("Voting buttons have different colors");
+    },
+  );
+
   if (parsedUrl.pathname) {
     await browserFns.visit(parsedUrl.pathname);
   }
