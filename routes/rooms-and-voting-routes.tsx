@@ -1,33 +1,35 @@
 import { randomUUID } from "node:crypto";
+import * as dbAccess from "../lib/db-functions/database-access.ts";
 import {
-  createRoom,
-  isRoomOpenByUrlName,
-  isUserOwnerOfRoom,
-  openRoom,
-  roomNameByUrlName,
-} from "../lib/database-access.ts";
-import { Routes } from "../lib/types.ts";
+  CurrentVote,
+  GuestRoomEventData,
+  HostRoomStatsData,
+  Routes,
+  VoterId,
+} from "../lib/types.ts";
 import {
   addGuestRoomEventListener,
   addHostRoomStatsListener,
-  CurrentStats,
-  CurrentVote,
   emitGuestRoomEvent,
   emitHostRoomStats,
   emitPreviousGuestStats,
   emitPreviousSummaryEvent,
-  GuestRoomEventData,
-  HostRoomStatsData,
-  VoterId,
+  removeGuestRoomEventListener,
+  removeHostRoomStatsListener,
 } from "../lib/events.ts";
 import { playgroundWrapReactElem, redirect } from "./helpers.tsx";
 import { getFullRoomUrlFromUrlName } from "../lib/utils.ts";
 import { RoomPage } from "../web-server/components.tsx";
-
-const currentVoteByRoomUrlName: Record<string, CurrentVote> = {};
-const currentStatsByRoomUrlName: Record<string, CurrentStats> = {};
-const previousVoteSummaryByRoomUrlName: Record<string, CurrentStats> = {};
-const currentUserListByRoomUrlName: Record<string, Set<VoterId>> = {};
+import {
+  addVoterIdToGuestsInRoom,
+  clearPreviousVoteSummary,
+  getCurrentStatsByRoomUrlName,
+  getCurrentVoteByRoomUrlName,
+  getPreviousVoteSummaryByRoomUrlName,
+  moveCurrentVoteToPreviousVote,
+  removeVoterIdToGuestsInRoom,
+  setCurrentVoteByRoomUrlName,
+} from "../lib/db-functions/faked-databse-interactions.ts";
 
 export const roomsAndVotingRoutes: Routes = {
   "/request-vote": {
@@ -47,16 +49,16 @@ export const roomsAndVotingRoutes: Routes = {
           '"You need to be logged in to perform this action"',
         );
       }
-      if (!isUserOwnerOfRoom(user, roomUrlName)) {
+      if (!dbAccess.isUserOwnerOfRoom(user, roomUrlName)) {
         return genericResponse("Wrong user trying to request a vote");
       }
-      const isOpen = roomNameByUrlName(roomUrlName);
-      if (!isOpen) {
+      const roomName = dbAccess.roomNameByUrlName(roomUrlName);
+      if (!roomName) {
         return genericResponse("Room not found");
       }
       const voteId = randomUUID();
 
-      delete previousVoteSummaryByRoomUrlName[roomUrlName];
+      clearPreviousVoteSummary(roomUrlName);
       emitPreviousSummaryEvent(roomUrlName, {
         type: "PREVIOUS_VOTE_SUMMARY",
         previousVoteSummary: undefined,
@@ -66,11 +68,11 @@ export const roomsAndVotingRoutes: Routes = {
         voteId,
         alreadyVoted: [],
       };
-      currentVoteByRoomUrlName[roomUrlName] = currentVote;
+      setCurrentVoteByRoomUrlName(roomUrlName, currentVote);
       emitGuestRoomEvent(roomUrlName, {
         type: "GUEST_ROOM_EVENT",
         statusMessage: "Vote requested",
-        isOpen: !!isOpen,
+        isOpen: !!roomName,
         currentVote,
       });
 
@@ -100,7 +102,7 @@ export const roomsAndVotingRoutes: Routes = {
       // if (roomName.length === 0) {
       //   return redirect("/account?error=room-name-empty");
       // }
-      createRoom(roomName, user.username);
+      dbAccess.createRoom(roomName, user.username);
       return redirect("/account");
     },
   },
@@ -122,7 +124,7 @@ export const roomsAndVotingRoutes: Routes = {
       if (!roomUrlName) {
         return redirect("/account?error=room-name-not-found-a");
       }
-      const result = openRoom(roomUrlName, user.username);
+      const result = dbAccess.openRoom(roomUrlName, user.username);
       if (result) {
         emitGuestRoomEvent(roomUrlName, {
           type: "GUEST_ROOM_EVENT",
@@ -143,24 +145,17 @@ export const roomsAndVotingRoutes: Routes = {
       if (typeof roomUrlName !== "string" || typeof voteId !== "string") {
         return redirect("/account?error=room-name-or-vote-id-empty");
       }
-      if (!isUserOwnerOfRoom(user, roomUrlName)) {
+      if (!dbAccess.isUserOwnerOfRoom(user, roomUrlName)) {
         return redirect("/?error=not-logged-in");
       }
-      const currentVoteForRoom = currentVoteByRoomUrlName[roomUrlName];
+      const currentVoteForRoom = getCurrentVoteByRoomUrlName(roomUrlName);
       if (currentVoteForRoom?.voteId !== voteId) {
         return redirect("/?error=vote-id-doesnt-match");
       }
-      previousVoteSummaryByRoomUrlName[roomUrlName] = Object.assign(
-        {},
-        currentStatsByRoomUrlName[roomUrlName],
+      const state = moveCurrentVoteToPreviousVote(
+        roomUrlName,
+        currentVoteForRoom,
       );
-      if (!previousVoteSummaryByRoomUrlName[roomUrlName].question) {
-        previousVoteSummaryByRoomUrlName[roomUrlName].question =
-          currentVoteForRoom.questionText;
-      }
-
-      delete currentVoteByRoomUrlName[roomUrlName];
-      const state = currentStatsByRoomUrlName[roomUrlName];
       if (state) {
         state.totalVotes = 0;
         state.votedAgainst = 0;
@@ -174,7 +169,7 @@ export const roomsAndVotingRoutes: Routes = {
       });
       emitPreviousSummaryEvent(roomUrlName, {
         type: "PREVIOUS_VOTE_SUMMARY",
-        previousVoteSummary: previousVoteSummaryByRoomUrlName[roomUrlName],
+        previousVoteSummary: getPreviousVoteSummaryByRoomUrlName(roomUrlName),
       });
       return redirect(getFullRoomUrlFromUrlName(roomUrlName));
     },
@@ -186,19 +181,15 @@ export const roomsAndVotingRoutes: Routes = {
       if (!urlName) {
         return redirect("/");
       }
-      const roomName = roomNameByUrlName(urlName);
-      const isOpen = isRoomOpenByUrlName(urlName);
+      const roomName = dbAccess.roomNameByUrlName(urlName);
+      const isOpen = dbAccess.isRoomOpenByUrlName(urlName);
       const user = requestAuthContext.getUser();
       if (!roomName) {
         return redirect("/");
       }
-      const userIsOwner = isUserOwnerOfRoom(user, urlName);
+      const userIsOwner = dbAccess.isUserOwnerOfRoom(user, urlName);
 
-      currentStatsByRoomUrlName[urlName] = currentStatsByRoomUrlName[urlName] ||
-        {
-          totalGuests: 0,
-        };
-      const currentVote = currentVoteByRoomUrlName[urlName];
+      const currentVote = getCurrentVoteByRoomUrlName(urlName);
       const userAlreadyVoted = (currentVote?.alreadyVoted || []).includes(
         voterId,
       );
@@ -210,11 +201,12 @@ export const roomsAndVotingRoutes: Routes = {
         userIsOwner: !!userIsOwner,
         roomOpenAtLoad: !!isOpen,
         initialCurrentVote: currentVote,
-        initialStats: currentStatsByRoomUrlName[urlName],
+        initialStats: getCurrentStatsByRoomUrlName(urlName),
         initialHasAlreadyVotedInThisVote: userAlreadyVoted,
-        initialPreviousVoteSummary: previousVoteSummaryByRoomUrlName[urlName],
+        initialPreviousVoteSummary: getPreviousVoteSummaryByRoomUrlName(
+          urlName,
+        ),
         voterId,
-        abc: "def",
       };
       return playgroundWrapReactElem(RoomPage, state);
     },
@@ -233,8 +225,8 @@ export const roomsAndVotingRoutes: Routes = {
       if (!roomUrlName) {
         return redirect("/?error=room-not-found");
       }
-      const currentVote = currentVoteByRoomUrlName[roomUrlName];
-      const voteStats = currentStatsByRoomUrlName[roomUrlName];
+      const currentVote = getCurrentVoteByRoomUrlName(roomUrlName);
+      const voteStats = getCurrentStatsByRoomUrlName(roomUrlName);
       if (!currentVote || !voteStats) {
         return redirect(req.url + "?error=vote-not-found");
       }
@@ -246,11 +238,7 @@ export const roomsAndVotingRoutes: Routes = {
         throw new Error("No voter id, wtf?");
       }
       alreadyVoted.push(voterId);
-      voteStats.totalVotes = voteStats.totalVotes || 0;
-      voteStats.votedFor = voteStats.votedFor || 0;
-      voteStats.votedAgainst = voteStats.votedAgainst || 0;
-      voteStats.abstained = voteStats.abstained || 0;
-      voteStats.totalVotes = voteStats.totalVotes + 1;
+      voteStats.totalVotes += 1;
       voteStats[vote] += 1;
       emitHostRoomStats(roomUrlName, voteStats);
       emitPreviousGuestStats(roomUrlName);
@@ -264,20 +252,20 @@ export const roomsAndVotingRoutes: Routes = {
       if (!urlName) {
         return genericError("No url name");
       }
-      const roomName = roomNameByUrlName(urlName);
+      const roomName = dbAccess.roomNameByUrlName(urlName);
       if (!roomName) {
         return genericError("failed to find room name");
       }
       const encoder = new TextEncoder();
-      let interval = setInterval(() => {
-      }, 9999);
-      clearInterval(interval);
+      let interval = -1;
 
-      const isForOwner = isUserOwnerOfRoom(
+      const isForOwner = dbAccess.isUserOwnerOfRoom(
         requestAuthContext.getUser(),
         urlName,
       );
       const voterId = requestAuthContext.getVoterId();
+
+      const closeFns = [] as (() => void)[];
 
       const readableStreamDefaultWriter = new ReadableStream({
         start(controller) {
@@ -297,16 +285,22 @@ export const roomsAndVotingRoutes: Routes = {
             }
           }
 
-          addGuestRoomEventListener(urlName, (data: GuestRoomEventData) => {
+          const listener = (data: GuestRoomEventData | HostRoomStatsData) => {
             send(data);
+          };
+
+          addGuestRoomEventListener(urlName, listener);
+          closeFns.push(() => {
+            removeGuestRoomEventListener(urlName, listener);
           });
           if (isForOwner) {
-            addHostRoomStatsListener(urlName, (data) => {
-              send(data);
+            addHostRoomStatsListener(urlName, listener);
+            closeFns.push(() => {
+              removeHostRoomStatsListener(urlName, listener);
             });
           }
           const sendCurrentStatus = () => {
-            const isOpen = isRoomOpenByUrlName(urlName);
+            const isOpen = dbAccess.isRoomOpenByUrlName(urlName); // todo: cache this
             if (!isForOwner) {
               addOneGuestToRoom(urlName, voterId);
             }
@@ -314,7 +308,7 @@ export const roomsAndVotingRoutes: Routes = {
               type: "GUEST_ROOM_EVENT",
               statusMessage: getStatusMessageText(!!isOpen),
               isOpen: !!isOpen,
-              currentVote: currentVoteByRoomUrlName[urlName],
+              currentVote: getCurrentVoteByRoomUrlName(urlName),
             });
           };
           interval = setInterval(sendCurrentStatus, 10_000);
@@ -322,8 +316,16 @@ export const roomsAndVotingRoutes: Routes = {
         },
         cancel() {
           clearInterval(interval);
-          if (!isForOwner && currentStatsByRoomUrlName[urlName]) {
+
+          if (!isForOwner && getCurrentStatsByRoomUrlName(urlName)) {
             removeOneGuestFromRoom(urlName, voterId);
+          }
+
+          while (closeFns.length > 0) {
+            const closeFn = closeFns.pop();
+            if (closeFn) {
+              closeFn();
+            }
           }
         },
       });
@@ -347,26 +349,21 @@ export const roomsAndVotingRoutes: Routes = {
   },
 };
 
-function emitRoomSizeChange(urlName: string) {
-  currentStatsByRoomUrlName[urlName].totalGuests =
-    currentUserListByRoomUrlName[urlName].size;
-  emitHostRoomStats(urlName, currentStatsByRoomUrlName[urlName]);
+function emitRoomSizeChange(roomUrlName: string) {
+  const stats = getCurrentStatsByRoomUrlName(roomUrlName);
+  if (stats) {
+    emitHostRoomStats(roomUrlName, stats);
+  }
 }
 
-function addOneGuestToRoom(urlName: string, voterId: VoterId) {
-  currentUserListByRoomUrlName[urlName] =
-    currentUserListByRoomUrlName[urlName] || new Set<VoterId>();
-  currentStatsByRoomUrlName[urlName] = currentStatsByRoomUrlName[urlName] || {};
-  currentUserListByRoomUrlName[urlName].add(voterId);
-  emitRoomSizeChange(urlName);
+function addOneGuestToRoom(roomUrlName: string, voterId: VoterId) {
+  addVoterIdToGuestsInRoom(roomUrlName, voterId);
+  emitRoomSizeChange(roomUrlName);
 }
 
-function removeOneGuestFromRoom(urlName: string, voterId: VoterId) {
-  currentUserListByRoomUrlName[urlName] =
-    currentUserListByRoomUrlName[urlName] || new Set<VoterId>();
-  currentStatsByRoomUrlName[urlName] = currentStatsByRoomUrlName[urlName] || {};
-  currentUserListByRoomUrlName[urlName].delete(voterId);
-  emitRoomSizeChange(urlName);
+function removeOneGuestFromRoom(roomUrlName: string, voterId: VoterId) {
+  removeVoterIdToGuestsInRoom(roomUrlName, voterId);
+  emitRoomSizeChange(roomUrlName);
 }
 
 function getStatusMessageText(isOpen: boolean, currentVote?: CurrentVote) {

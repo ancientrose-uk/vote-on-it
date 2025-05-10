@@ -1,8 +1,8 @@
 import path from "node:path";
 import { Database } from "jsr:@db/sqlite";
-import { pathJoin, projectDir } from "./paths.ts";
+import { pathJoin, projectDir } from "../paths.ts";
 import { randomUUID } from "node:crypto";
-import { User } from "./AuthHandler.ts";
+import { User } from "../AuthHandler.ts";
 
 let db: Database | undefined;
 
@@ -104,6 +104,7 @@ export function roomNameByUrlName(urlName: string) {
   }
   return row.name;
 }
+
 export function isRoomOpenByUrlName(urlName: string) {
   const db = getDb();
   const row = db.prepare(
@@ -111,22 +112,6 @@ export function isRoomOpenByUrlName(urlName: string) {
     SELECT isOpen FROM rooms WHERE urlName = ?;
     `,
   ).get<{ isOpen: boolean }>(urlName);
-  if (!row) {
-    return null;
-  }
-  return row.isOpen;
-}
-
-export function isRoomOpenByNameAndOwner(
-  roomName: string,
-  ownerUsername: string,
-) {
-  const db = getDb();
-  const row = db.prepare(
-    `
-    SELECT isOpen FROM rooms WHERE name = ? AND ownerUsername = ?;
-    `,
-  ).get<{ isOpen: boolean }>(roomName, ownerUsername);
   if (!row) {
     return null;
   }

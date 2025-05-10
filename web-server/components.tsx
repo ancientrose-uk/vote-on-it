@@ -6,7 +6,7 @@ import {
   HostRoomStatsData,
   PreviousVoteStats,
   VoterId,
-} from "../lib/events.ts";
+} from "../lib/types.ts";
 
 const buttonClasses =
   "bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-md transition-colors mr-6 mt-6 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50";
@@ -407,7 +407,8 @@ export function GuestVotingButtons(
 export function PreviousVoteSummaryList(
   { voteSummary }: { voteSummary?: CurrentStats },
 ) {
-  if (!voteSummary) {
+  console.log("voteSummary", voteSummary);
+  if (!voteSummary || voteSummary.votedFor === undefined) {
     return null;
   }
   return (
@@ -452,7 +453,9 @@ export function RoomDisplayForGuest(
   if (currentVote) {
     if (hasAlreadyVotedInThisVote) {
       voteDisplay = (
-        <p className={normalTextClasses}>Your vote has been received</p>
+        <p className={`${normalTextClasses} voteReceivedMessage`}>
+          Your vote has been received
+        </p>
       );
     } else {
       voteDisplay = GuestVotingButtons({ currentVote, roomUrlName });

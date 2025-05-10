@@ -1,7 +1,7 @@
 import {
   getLatestRoomNameForOwnerName,
   getUrlForRoomNameAndOwner,
-} from "../lib/database-access.ts";
+} from "../lib/db-functions/database-access.ts";
 
 import { playgroundWrapReactElem, redirect } from "./helpers.tsx";
 import { getFullRoomUrlFromUrlName } from "../lib/utils.ts";

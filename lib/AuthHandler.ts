@@ -1,6 +1,10 @@
 import { shaEncryptPassword } from "../system-tests/helpers/encryption.ts";
-import { ensureDbExists, getSession, setSession } from "./database-access.ts";
-import { VoterId } from "./events.ts";
+import {
+  ensureDbExists,
+  getSession,
+  setSession,
+} from "./db-functions/database-access.ts";
+import { VoterId } from "./types.ts";
 
 await ensureDbExists();
 
