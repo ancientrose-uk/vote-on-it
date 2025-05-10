@@ -57,7 +57,7 @@ async function buildAndWriteClientJs() {
   const start = Date.now();
   console.log("starting client js build");
   const result = await bundle(pathJoin(webserverDir, "client.tsx"), {
-    importMap: pathJoin(projectDir, "import_map.json"),
+    importMap: pathJoin(webserverDir, "import_map.json"),
     minify: false,
     compilerOptions: {
       jsx: "react",
