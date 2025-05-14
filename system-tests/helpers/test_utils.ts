@@ -284,12 +284,11 @@ export async function getBrowserPage(
     await page.reload();
   });
 
-  addBrowserFunction("hasElement", async (selector: string, text?: string) => {
+  addBrowserFunction("hasElement", async (selector: string) => {
     await browserFns.refreshPageWhenJsDisabled();
-    const extra = text ? `with text [${text}]` : "";
-    verboseLog(`Checking for element [${selector}] ${extra}`);
+    verboseLog(`Checking for element [${selector}]`);
     const count = await page.locator(selector).count();
-    verboseLog(`Found [${count}] elements [${selector}] ${extra}`);
+    verboseLog(`Found [${count}] elements [${selector}]`);
     return count > 0;
   });
   addBrowserFunction("getVoteSummary", async () => {
