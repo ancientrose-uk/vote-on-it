@@ -114,6 +114,13 @@ export function removeVoterIdToGuestsInRoom(
   ensureTotalAtendeeCountMatchesInUserListAndStats(roomUrlName);
 }
 
+export function addVoterIdToAlreadyVoted(
+  roomUrlName: string,
+  voterId: VoterId,
+) {
+  currentVoteByRoomUrlName[roomUrlName]?.alreadyVoted.push(voterId);
+}
+
 export function validateAndRegisterVote(
   roomUrlName: string,
   voterId: VoterId,
@@ -126,12 +133,13 @@ export function validateAndRegisterVote(
       wasAllowedToVote: false,
     };
   }
-  if (currentVote.alreadyVoted.includes(voterId)) {
+  const userVotedAlready = currentVote.alreadyVoted.includes(voterId);
+  if (userVotedAlready) {
     return {
       wasAllowedToVote: false,
     };
   }
-  currentVote.alreadyVoted.push(voterId);
+  addVoterIdToAlreadyVoted(roomUrlName, voterId);
   currentStatsByRoomUrlName[roomUrlName].totalVotes++;
   switch (vote) {
     case "votedFor":
