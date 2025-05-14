@@ -505,7 +505,6 @@ function getPresentButtons(buttonSummaryBeforeVoting: {
     if (curr.abstainButton) {
       acc.push("Abstain");
     }
-    console.log(acc);
     return acc;
   }, [] as string[]);
 }
