@@ -154,24 +154,21 @@ describe("Rooms", () => {
       const { browserFns: thirdGuestBrowser } = await getBrowserPage(roomUrl);
       const { browserFns: fourthGuestBrowser } = await getBrowserPage(roomUrl);
 
-      const allBrowsersPromise = Promise.all([
-        waitForRoomStatusMessageToBecome(
-          firstGuestBrowser,
-          "Question: Is the sky blue?",
-        ),
-        waitForRoomStatusMessageToBecome(
-          secondGuestBrowser,
-          "Question: Is the sky blue?",
-        ),
-        waitForRoomStatusMessageToBecome(
-          thirdGuestBrowser,
-          "Question: Is the sky blue?",
-        ),
-        waitForRoomStatusMessageToBecome(
-          fourthGuestBrowser,
-          "Question: Is the sky blue?",
-        ),
-      ]);
+      const guestBrowsers = [
+        firstGuestBrowser,
+        secondGuestBrowser,
+        thirdGuestBrowser,
+        fourthGuestBrowser,
+      ];
+
+      const allBrowsersPromise = Promise.all(
+        guestBrowsers.map(async (browser) => {
+          await waitForRoomStatusMessageToBecome(
+            browser,
+            "Question: Is the sky blue?",
+          );
+        }),
+      );
 
       await hostBrowser.clickButton(`Start Voting Session`);
 
@@ -183,12 +180,20 @@ describe("Rooms", () => {
 
       await allBrowsersPromise;
 
-      await Promise.all([
-        firstGuestBrowser.assertThatTheVotingButtonsAreDifferentColors(),
-        secondGuestBrowser.assertThatTheVotingButtonsAreDifferentColors(),
-        thirdGuestBrowser.assertThatTheVotingButtonsAreDifferentColors(),
-        fourthGuestBrowser.assertThatTheVotingButtonsAreDifferentColors(),
-      ]);
+      await Promise.all(guestBrowsers.map(async (browser) => {
+        await browser.assertThatTheVotingButtonsAreDifferentColors();
+      }));
+
+      const buttonSummaryBeforeVoting = await getButtonSummaryForBrowsers(
+        guestBrowsers,
+      );
+
+      const presentButtons = getPresentButtons(buttonSummaryBeforeVoting);
+
+      expect(presentButtons).toEqual(
+        guestBrowsers.map(() => ["For", "Against", "Abstain"]).flat(),
+      );
+
       await Promise.all([
         firstGuestBrowser.clickButton("For"),
         secondGuestBrowser.clickButton("Against"),
@@ -196,33 +201,36 @@ describe("Rooms", () => {
         fourthGuestBrowser.clickButton("For"),
       ]);
 
+      const buttonSummaryAfterVoting = await getButtonSummaryForBrowsers(
+        guestBrowsers,
+      );
+
+      const presentButtonsAfterVoting = getPresentButtons(
+        buttonSummaryAfterVoting,
+      );
+
+      expect(presentButtonsAfterVoting).toEqual([]);
+
+      await Promise.all(
+        guestBrowsers.map(async (browser) =>
+          await browser.hasElement(".voteSummary")
+        ),
+      );
+
       await hostBrowser.clickButton("End vote");
 
-      await Promise.all([
-        waitForRoomStatusMessageToBecome(
-          firstGuestBrowser,
-          "Voting session started.",
+      await Promise.all(
+        guestBrowsers.map((browser) =>
+          waitForRoomStatusMessageToBecome(
+            browser,
+            "Voting session started.",
+          )
         ),
-        waitForRoomStatusMessageToBecome(
-          secondGuestBrowser,
-          "Voting session started.",
-        ),
-        waitForRoomStatusMessageToBecome(
-          thirdGuestBrowser,
-          "Voting session started.",
-        ),
-        waitForRoomStatusMessageToBecome(
-          fourthGuestBrowser,
-          "Voting session started.",
-        ),
-      ]);
+      );
 
       const allBrowsers = [
         hostBrowser,
-        firstGuestBrowser,
-        secondGuestBrowser,
-        thirdGuestBrowser,
-        fourthGuestBrowser,
+        ...guestBrowsers,
       ];
 
       await Promise.all(
@@ -466,4 +474,37 @@ async function loginAndCreateRoom(
 
   const { baseUrl, path } = splitUrlIntoBaseAndPath(roomUrl);
   return { roomUrl, baseUrl, path };
+}
+
+async function getButtonSummaryForBrowsers(guestBrowsers: BrowserFunctions[]) {
+  return await Promise.all(guestBrowsers.map(async (browser) => {
+    return {
+      forButton: await browser.hasElement("button:has-text('For')"),
+      againstButton: await browser.hasElement("button:has-text('Against')"),
+      abstainButton: await browser.hasElement("button:has-text('Abstain')"),
+    };
+  }));
+}
+
+function getPresentButtons(buttonSummaryBeforeVoting: {
+  againstButton: boolean;
+  abstainButton: boolean;
+  forButton: boolean;
+}[]) {
+  return buttonSummaryBeforeVoting.reduce((acc: string[], curr: {
+    forButton: boolean;
+    againstButton: boolean;
+    abstainButton: boolean;
+  }) => {
+    if (curr.forButton) {
+      acc.push("For");
+    }
+    if (curr.againstButton) {
+      acc.push("Against");
+    }
+    if (curr.abstainButton) {
+      acc.push("Abstain");
+    }
+    return acc;
+  }, [] as string[]);
 }
