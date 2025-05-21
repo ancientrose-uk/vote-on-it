@@ -5,7 +5,8 @@ const dirname = path.dirname(new URL(import.meta.url).pathname);
 export const projectDir = path.join(dirname, "..");
 export const webserverDir = path.join(projectDir, "web-server");
 export const publicDir = path.join(webserverDir, "public");
-export const persistenceDir = path.join(projectDir, ".persistence");
+export const persistenceDir = Deno.env.get("VOI__PERSISTENCE_DIR") ||
+  path.join(projectDir, ".persistence");
 
 export function pathJoin(...paths: string[]): string {
   return path.join(...paths);
