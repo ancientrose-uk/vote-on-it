@@ -21,6 +21,10 @@ export function RoomDisplayForHost(
 ) {
   return (
     <>
+      {isOpen
+        ? getVoteControls(roomUrlName, currentVote, stats)
+        : getOpenVotingForm(roomUrlName)}
+      <PreviousVoteSummaryList voteSummary={previousVoteSummary} />
       <div className={largeContainer}>
         <p className={normalTextClasses}>
           The room is currently {isOpen
@@ -34,10 +38,6 @@ export function RoomDisplayForHost(
           <a className={normalLinkClasses} href={roomUrl}>{roomUrl}</a>
         </p>
       </div>
-      {isOpen
-        ? getVoteControls(roomUrlName, currentVote, stats)
-        : getOpenVotingForm(roomUrlName)}
-      <PreviousVoteSummaryList voteSummary={previousVoteSummary} />
     </>
   );
 }
