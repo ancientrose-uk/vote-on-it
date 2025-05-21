@@ -13,8 +13,15 @@ export function PreviousVoteSummaryList(
   if (!voteSummary || voteSummary.votedFor === undefined) {
     return null;
   }
+  const outcomeSummary = getOutcomeSummary(voteSummary);
+  let borderColorClass = "border-gray-300";
+  if (outcomeSummary === "Passed") {
+    borderColorClass = "border-green-600";
+  } else if (outcomeSummary === "Failed") {
+    borderColorClass = "border-red-500";
+  }
   return (
-    <div className={normalAreaClasses}>
+    <div className={normalAreaClasses + " " + borderColorClass}>
       <p className={normalTextClasses}>
         Previous question: {voteSummary.question}
       </p>
@@ -22,7 +29,7 @@ export function PreviousVoteSummaryList(
         <div className="mb-4">
           <dt className={normalLabelClasses}>Outcome</dt>
           <dd className={normalTextClasses}>
-            {getOutcomeSummary(voteSummary)}
+            {outcomeSummary}
           </dd>
         </div>
         <div className="mb-4">

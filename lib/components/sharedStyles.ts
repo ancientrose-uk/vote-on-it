@@ -9,7 +9,8 @@ export const headingClasses =
 export const mainHeadingClasses = `${headingClasses} pt-16 pb-8 text-4xl`;
 export const normalFormClasses =
   "bg-white p-6 rounded-lg shadow-lg mb-16 border-gray-300";
-export const normalAreaClasses = normalFormClasses;
+export const normalAreaClasses = normalFormClasses +
+  " border-2 border-gray-100";
 export const normalLinkClasses =
   "text-blue-500 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500";
 export const normalLabelClasses = "block text-gray-700 text-lg font-bold mb-2";
@@ -19,6 +20,7 @@ export const roomUrlClasses =
   `newlyCreatedRoomUrl mt-6 mb-8 ${normalTextClasses}`;
 export const errorMessageClasses =
   "errorMessage bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4";
-export const largeContainer = "bg-white p-6 rounded-lg shadow-lg mb-16";
+export const largeContainer =
+  "bg-white p-6 rounded-lg shadow-lg mb-16 border-2 border-grey-100";
 export const pageContainer = "max-w-4xl mx-auto p-8";
 export const smallPageContainer = `${pageContainer} max-w-md`;
