@@ -1,6 +1,6 @@
 import React from "react";
 import { CurrentVote } from "../types.ts";
-import { buttonClasses, normalFormClasses } from "./sharedStyles.ts";
+import { voteButtonClasses } from "./sharedStyles.ts";
 
 export function GuestVotingButtons(
   { currentVote, roomUrlName }: {
@@ -9,7 +9,7 @@ export function GuestVotingButtons(
   },
 ) {
   return (
-    <form action="?" className={normalFormClasses} method="post">
+    <form action="?" method="post">
       <input
         type="hidden"
         name="voteId"
@@ -21,7 +21,7 @@ export function GuestVotingButtons(
         value={roomUrlName}
       />
       <button
-        className={`${buttonClasses} bg-green-800`}
+        className={`${voteButtonClasses} bg-green-800 hover:bg-green-600`}
         type="submit"
         name="vote"
         value="for"
@@ -29,7 +29,7 @@ export function GuestVotingButtons(
         Yes (vote for)
       </button>
       <button
-        className={`${buttonClasses} bg-red-800`}
+        className={`${voteButtonClasses} bg-red-800 hover:bg-red-600`}
         type="submit"
         name="vote"
         value="against"
@@ -37,7 +37,7 @@ export function GuestVotingButtons(
         No (vote against)
       </button>
       <button
-        className={`${buttonClasses} bg-gray-500`}
+        className={`${voteButtonClasses} bg-gray-500 hover:bg-gray-700`}
         type="submit"
         name="vote"
         value="abstain"

@@ -3,10 +3,11 @@ import {
   buttonClasses,
   errorMessageClasses,
   headingClasses,
+  mainHeadingClasses,
   normalFormClasses,
   normalInputClasses,
   normalLabelClasses,
-  normalTextClasses,
+  pageContainer,
 } from "./sharedStyles.ts";
 import { getLatestRoomDisplay } from "./getLatestRoomDisplay.tsx";
 
@@ -19,14 +20,11 @@ export function AccountPage(
   },
 ) {
   return (
-    <div className="max-w-4xl mx-auto p-8">
-      <h1 className={headingClasses}>
+    <div className={pageContainer}>
+      <h1 className={mainHeadingClasses}>
         Welcome to your account{" "}
         <span className="text-blue-600">{username}</span>!
       </h1>
-      <p className={normalTextClasses}>
-        This is your account page. You can create a new room here.
-      </p>
       <form action="/create-room" method="POST" className={normalFormClasses}>
         <div className="mb-4">
           {errorMessage
@@ -36,6 +34,7 @@ export function AccountPage(
               </p>
             )
             : null}
+          <h2 className={headingClasses}>Create a new room</h2>
           <label
             htmlFor="roomName"
             className={normalLabelClasses}

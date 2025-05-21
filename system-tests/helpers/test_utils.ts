@@ -168,7 +168,7 @@ export async function getBrowserPage(
 
   addBrowserFunction("getHeading", async (level = 1, allow404Title = false) => {
     verboseLog(`getting heading`, level);
-    const heading = await page.getByRole("heading", level).textContent();
+    const heading = await page.getByRole("heading", { level }).textContent();
     verboseLog(`heading`, level, `is`, heading);
     if (level === 1 && !allow404Title && heading === "You seem to be lost!") {
       throw new Error(`404 heading detected for URL [${page.url()}]`);
@@ -250,6 +250,14 @@ export async function getBrowserPage(
     return roomStatusMessage;
   });
 
+  addBrowserFunction("getCurrentQuestionFromGuestScreen", async () => {
+    verboseLog("getting question from guest screen");
+    const roomStatusMessage = await page.locator(".currentQuestionForGuests")
+      .textContent();
+    verboseLog("got question from guest screen", roomStatusMessage);
+    return roomStatusMessage;
+  });
+
   addBrowserFunction(
     "logInUser",
     async (username: string, password: string) => {
@@ -313,9 +321,11 @@ export async function getBrowserPage(
     }
 
     // Create a key-value object from the `dt` and `dd` pairs
-    const voteSummary: Record<string, number> = {};
+    const voteSummary: Record<string, (number | string)> = {};
     for (let i = 0; i < dtElements.length; i++) {
-      voteSummary[dtElements[i]] = Number(ddElements[i]);
+      const textVal = ddElements[i];
+      const numVal = Number(textVal);
+      voteSummary[dtElements[i]] = isNaN(numVal) ? textVal : numVal;
     }
 
     verboseLog("Vote summary extracted:", voteSummary);

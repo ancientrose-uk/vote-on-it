@@ -365,9 +365,9 @@ function getStatusMessageText(isOpen: boolean, currentVote?: CurrentVote) {
     return `Vote requested`;
   }
   if (isOpen) {
-    return "Voting session started.";
+    return "Waiting for the host to ask a question.";
   }
-  return "Waiting for host to start voting session.";
+  return "This room is not open yet";
 }
 
 function prepareDataForEventEnqueue(
