@@ -42,10 +42,10 @@
       ]
     },
     "test:semitest:lockfile": {
-      "command": "deno run --allow-env=VOI__VERBOSE,VOI__PERSISTENCE_DIR --allow-run system-tests/semitests/lockfile-semitest.ts"
+      "command": "deno run --allow-env=VOI__VERBOSE --allow-run system-tests/semitests/lockfile-semitest.ts"
     },
     "test:semitest:no-rebuild": {
-      "command": "deno run --allow-env=VOI__VERBOSE,VOI__PERSISTENCE_DIR --allow-run system-tests/semitests/noRebuild-semitest.ts"
+      "command": "deno run --allow-env=VOI__VERBOSE --allow-run system-tests/semitests/noRebuild-semitest.ts"
     },
     "test:semitest:all": {
       "command": "deno task test:semitest:lockfile && deno task test:semitest:no-rebuild"
@@ -65,7 +65,7 @@
         "build"
       ]
     },
-    "start": "deno run --allow-env=PORT,VOI__PORT,VOI__CANONICAL_BASE_URL,NODE_ENV,VOI__VERBOSE,VOI__ALLOWED_USERS,VOI__SQLITE_LOCATION,DENO_SQLITE_PATH,DENO_SQLITE_LOCAL,DENO_DIR,XDG_CACHE_HOME,VOI__PERSISTENCE_DIR,HOME --allow-read=lib/db-create.sqlite.sql,web-server/public,.persistence,$HOME/.cache --allow-write=.persistence --allow-ffi --allow-net=0.0.0.0 web-server/index.tsx"
+    "start": "deno run --allow-env=PORT,VOI__PORT,VOI__CANONICAL_BASE_URL,NODE_ENV,VOI__VERBOSE,VOI__ALLOWED_USERS,VOI__SQLITE_LOCATION,DENO_SQLITE_PATH,DENO_SQLITE_LOCAL,DENO_DIR,XDG_CACHE_HOME,HOME --allow-read=lib/db-create.sqlite.sql,web-server/public,.persistence,$HOME/.cache --allow-write=.persistence --allow-ffi --allow-net=0.0.0.0 web-server/index.tsx"
   },
   "imports": {
     "@db/sqlite": "jsr:@db/sqlite@^0.12.0",
