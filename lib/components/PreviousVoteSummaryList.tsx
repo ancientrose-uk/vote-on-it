@@ -14,11 +14,17 @@ export function PreviousVoteSummaryList(
     return null;
   }
   return (
-    <>
+    <div className={normalAreaClasses}>
       <p className={normalTextClasses}>
         Previous question: {voteSummary.question}
       </p>
-      <dl className={`${normalAreaClasses} p-4 voteSummary`}>
+      <dl className={`p-4 voteSummary`}>
+        <div className="mb-4">
+          <dt className={normalLabelClasses}>Outcome</dt>
+          <dd className={normalTextClasses}>
+            {getOutcomeSummary(voteSummary)}
+          </dd>
+        </div>
         <div className="mb-4">
           <dt className={normalLabelClasses}>Votes for</dt>
           <dd className={normalTextClasses}>{voteSummary.votedFor}</dd>
@@ -32,6 +38,16 @@ export function PreviousVoteSummaryList(
           <dd className={normalTextClasses}>{voteSummary.abstained}</dd>
         </div>
       </dl>
-    </>
+    </div>
   );
+}
+
+function getOutcomeSummary(voteSummary: CurrentStats) {
+  if (voteSummary.votedFor > voteSummary.votedAgainst) {
+    return "Passed";
+  }
+  if (voteSummary.votedFor < voteSummary.votedAgainst) {
+    return "Failed";
+  }
+  return "Tied";
 }

@@ -6,6 +6,7 @@ import {
   normalFormClasses,
   normalInputClasses,
   normalLabelClasses,
+  smallPageContainer,
 } from "./sharedStyles.ts";
 
 export function LoginPage(
@@ -13,7 +14,7 @@ export function LoginPage(
 ) {
   const [username, setUsername] = useState(prefilledUsername);
   return (
-    <div className="max-w-md mx-auto p-8">
+    <div className={smallPageContainer}>
       <h1 className={headingClasses}>
         Log in to your account
       </h1>

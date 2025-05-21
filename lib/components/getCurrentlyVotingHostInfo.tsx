@@ -1,7 +1,7 @@
 import React from "react";
 import { CurrentStats, CurrentVote } from "../types.ts";
 import { getVoteProgressElement } from "./getVoteProgressElement.tsx";
-import { buttonClasses } from "./sharedStyles.ts";
+import { buttonClasses, largeContainer } from "./sharedStyles.ts";
 
 export function getCurrentlyVotingHostInfo(
   { currentVote, roomUrlName, stats }: {
@@ -11,7 +11,7 @@ export function getCurrentlyVotingHostInfo(
   },
 ) {
   return (
-    <>
+    <div className={largeContainer}>
       <p>Currently voting on: {currentVote.questionText}</p>
       {currentVote && stats
         ? getVoteProgressElement({ currentVote, stats })
@@ -31,6 +31,6 @@ export function getCurrentlyVotingHostInfo(
           End Vote
         </button>
       </form>
-    </>
+    </div>
   );
 }

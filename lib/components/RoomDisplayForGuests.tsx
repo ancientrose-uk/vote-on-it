@@ -1,5 +1,10 @@
 import { CurrentStats, CurrentVote } from "../types.ts";
-import { normalTextClasses } from "./sharedStyles.ts";
+import {
+  largeContainer,
+  normalTextClasses,
+  smallPageContainer,
+  subHeadingClasses,
+} from "./sharedStyles.ts";
 import React from "react";
 import { GuestVotingButtons } from "./GuestVotingButtons.tsx";
 import { PreviousVoteSummaryList } from "./PreviousVoteSummaryList.tsx";
@@ -23,7 +28,7 @@ export function RoomDisplayForGuest(
   if (currentVote) {
     if (hasAlreadyVotedInThisVote) {
       voteDisplay = (
-        <p className={`${normalTextClasses} voteReceivedMessage`}>
+        <p className={`${normalTextClasses} voteReceivedMessage text-center`}>
           Your vote has been received
         </p>
       );
@@ -32,14 +37,25 @@ export function RoomDisplayForGuest(
     }
   }
   return (
-    <>
-      <p className={"roomStatusMessage " + normalTextClasses}>
-        {currentVote
-          ? ("Question: " + currentVote.questionText)
-          : statusMessage}
-      </p>
-      {voteDisplay}
-      <PreviousVoteSummaryList voteSummary={previousVoteSummary} />
-    </>
+    <div className={smallPageContainer}>
+      <div className={largeContainer + " pt-4"}>
+        <p className={"roomStatusMessage text-center " + normalTextClasses}>
+          {currentVote
+            ? (
+              <h2
+                className={subHeadingClasses +
+                  " currentQuestionForGuests text-center"}
+              >
+                {currentVote.questionText}
+              </h2>
+            )
+            : statusMessage}
+        </p>
+        {voteDisplay}
+      </div>
+      {!currentVote
+        ? <PreviousVoteSummaryList voteSummary={previousVoteSummary} />
+        : null}
+    </div>
   );
 }

@@ -89,10 +89,10 @@ describe("Rooms", () => {
 
       const heading = await firstGuestBrowser.getHeading(1);
 
-      expect(heading).toBe(`Welcome to the room: ${roomName}`);
+      expect(heading).toBe(`${roomName}`);
 
       expect(await firstGuestBrowser.getRoomStatusMessage()).toEqual(
-        "Waiting for host to start voting session.",
+        "This room is not open yet",
       );
 
       await hostBrowser.clickLink(roomUrl);
@@ -103,7 +103,7 @@ describe("Rooms", () => {
 
       expect(await hostBrowser.getCurrentUri()).toEqual(path);
 
-      const votingStartedMessage = "Voting session started.";
+      const votingStartedMessage = "Waiting for the host to ask a question.";
 
       secondGuestBrowser.visit(path);
 
@@ -165,7 +165,10 @@ describe("Rooms", () => {
         guestBrowsers.map(async (browser) => {
           await waitForRoomStatusMessageToBecome(
             browser,
-            "Question: Is the sky blue?",
+            "Is the sky blue?",
+            {
+              hackyLookupQuestionInstead: true,
+            },
           );
         }),
       );
@@ -223,7 +226,7 @@ describe("Rooms", () => {
         guestBrowsers.map((browser) =>
           waitForRoomStatusMessageToBecome(
             browser,
-            "Voting session started.",
+            "Waiting for the host to ask a question.",
           )
         ),
       );
@@ -236,6 +239,7 @@ describe("Rooms", () => {
       await Promise.all(
         allBrowsers.map(async (browser) => {
           expect(await browser.getVoteSummary()).toEqual({
+            Outcome: "Passed",
             "Votes for": 2,
             "Votes against": 1,
             Abstained: 1,
@@ -250,24 +254,17 @@ describe("Rooms", () => {
         }
       }));
 
-      const allBrowsersPromise2 = Promise.all([
-        waitForRoomStatusMessageToBecome(
-          firstGuestBrowser,
-          "Question: Is the sky red?",
+      const allBrowsersPromise2 = Promise.all(
+        guestBrowsers.map((browser) =>
+          waitForRoomStatusMessageToBecome(
+            browser,
+            "Is the sky red?",
+            {
+              hackyLookupQuestionInstead: true,
+            },
+          )
         ),
-        waitForRoomStatusMessageToBecome(
-          secondGuestBrowser,
-          "Question: Is the sky red?",
-        ),
-        waitForRoomStatusMessageToBecome(
-          thirdGuestBrowser,
-          "Question: Is the sky red?",
-        ),
-        waitForRoomStatusMessageToBecome(
-          fourthGuestBrowser,
-          "Question: Is the sky red?",
-        ),
-      ]);
+      );
 
       await hostBrowser.fillFormWith({
         voteTitle: "Is the sky red?",
@@ -299,6 +296,7 @@ describe("Rooms", () => {
       await Promise.all(
         allBrowsers.map(async (browser) => {
           expect(await browser.getVoteSummary()).toEqual({
+            Outcome: "Tied",
             "Votes for": 0,
             "Votes against": 0,
             Abstained: 4,
@@ -331,7 +329,7 @@ describe("Rooms", () => {
               const status = await guestBrowser.browserFns
                 .getRoomStatusMessage();
               expect(status).toEqual(
-                "Waiting for host to start voting session.",
+                "This room is not open yet",
               );
               return guestBrowser;
             })),
@@ -350,21 +348,21 @@ describe("Rooms", () => {
       );
       await Promise.all(firstHost.guestBrowsers.map(async (guestBrowser) => {
         expect(await guestBrowser.browserFns.getHeading(1)).toEqual(
-          `Welcome to the room: ${firstHost.roomName}`,
+          `${firstHost.roomName}`,
         );
         await waitForRoomStatusMessageToBecome(
           guestBrowser.browserFns,
-          "Voting session started.",
+          "Waiting for the host to ask a question.",
         );
       }));
 
       await Promise.all(hosts.map(async (host) => {
         await Promise.all(host.guestBrowsers.map(async (guestBrowser) => {
           expect(await guestBrowser.browserFns.getHeading(1)).toEqual(
-            `Welcome to the room: ${host.roomName}`,
+            `${host.roomName}`,
           );
           expect(await guestBrowser.browserFns.getRoomStatusMessage()).toEqual(
-            "Waiting for host to start voting session.",
+            "This room is not open yet",
           );
         }));
       }));
@@ -431,16 +429,19 @@ function generateUniqueTestRoomName() {
 }
 
 async function waitForRoomStatusMessageToBecome(
-  guest1Browser: BrowserFunctions,
+  browser: BrowserFunctions,
   votingStartedMessage: string,
-  options: { refreshEachTime?: boolean } = {},
+  options: { refreshEachTime?: boolean; hackyLookupQuestionInstead?: boolean } =
+    {},
 ) {
-  let lastKnownStatusMessage = await guest1Browser.getRoomStatusMessage();
+  let lastKnownStatusMessage = await browser.getRoomStatusMessage();
   await waitForCondition(async () => {
     if (options.refreshEachTime || turnOffJsEverywhere) {
-      await guest1Browser.refresh();
+      await browser.refresh();
     }
-    lastKnownStatusMessage = await guest1Browser.getRoomStatusMessage();
+    lastKnownStatusMessage = options.hackyLookupQuestionInstead
+      ? await browser.getCurrentQuestionFromGuestScreen()
+      : await browser.getRoomStatusMessage();
     verboseLog(
       `Checking room status message [${lastKnownStatusMessage}] against [${votingStartedMessage}], [${
         lastKnownStatusMessage === votingStartedMessage

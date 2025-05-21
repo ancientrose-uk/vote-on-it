@@ -27,8 +27,8 @@ export function getVoteProgressElement(
   }
   const totalVotes = stats.totalVotes || 0;
   const totalGuests = stats.totalGuests || 0;
-  if (totalVotes >= totalGuests) {
-    return <p>Vote complete</p>;
+  if (totalGuests === 0) {
+    return <p>No guests connected</p>;
   }
   const percentage = Math.round((totalVotes / totalGuests) * 100);
   const progress = (

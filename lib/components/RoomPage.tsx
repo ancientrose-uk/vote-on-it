@@ -7,7 +7,7 @@ import {
   VoterId,
 } from "../types.ts";
 import { useEffect, useState } from "react";
-import { headingClasses } from "./sharedStyles.ts";
+import { mainHeadingClasses, pageContainer } from "./sharedStyles.ts";
 import { RoomDisplayForHost } from "./RoomDisplayForHost.tsx";
 import React from "react";
 import { RoomDisplayForGuest } from "./RoomDisplayForGuests.tsx";
@@ -78,8 +78,8 @@ export function RoomPage(
     };
   }, []);
   return (
-    <div>
-      <h1 className={headingClasses}>Welcome to the room: {roomName}</h1>
+    <div className={pageContainer}>
+      <h1 className={mainHeadingClasses}>{roomName}</h1>
       {userIsOwner && stats
         ? (
           <RoomDisplayForHost
