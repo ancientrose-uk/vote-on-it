@@ -29,6 +29,7 @@ import {
   removeVoterIdToGuestsInRoom,
   setCurrentVoteByRoomUrlName,
   validateAndRegisterVote,
+  writeVoteSummary,
 } from "../lib/db-functions/faked-databse-interactions.ts";
 import { RoomPage } from "../lib/components/RoomPage.tsx";
 
@@ -166,6 +167,10 @@ export const roomsAndVotingRoutes: Routes = {
         type: "PREVIOUS_VOTE_SUMMARY",
         previousVoteSummary: getPreviousVoteSummaryByRoomUrlName(roomUrlName),
       });
+      await writeVoteSummary(
+        roomUrlName,
+        getPreviousVoteSummaryByRoomUrlName(roomUrlName),
+      );
       return redirect(getFullRoomUrlFromUrlName(roomUrlName));
     },
   },

@@ -1,4 +1,5 @@
 import { CurrentStats, CurrentVote, VoterId } from "../types.ts";
+import { persistenceDir } from "../paths.ts";
 
 const currentVoteByRoomUrlName: Record<string, CurrentVote> = {};
 const currentStatsByRoomUrlName: Record<string, CurrentStats> = {};
@@ -155,4 +156,24 @@ export function validateAndRegisterVote(
   return {
     wasAllowedToVote: true,
   };
+}
+
+const voteSummariesDir = `${persistenceDir}/vote-summaries`;
+await Deno.mkdir(voteSummariesDir, { recursive: true });
+export async function writeVoteSummary(
+  roomUrlName: string,
+  voteSummary: CurrentStats | undefined,
+) {
+  if (!voteSummary) {
+    console.log("- - - - ");
+    console.log("Missing vote summary, couldn't write it");
+    console.log("- - - - ");
+  }
+  const filePath = `${voteSummariesDir}/${roomUrlName}.json`;
+
+  await Deno.writeTextFile(
+    filePath,
+    JSON.stringify(voteSummary) + "\n",
+    { append: true },
+  );
 }
