@@ -173,7 +173,7 @@ export async function writeVoteSummary(
 
   await Deno.writeTextFile(
     filePath,
-    JSON.stringify(voteSummary) + "\n",
+    JSON.stringify({ savedAt: new Date(), ...voteSummary }) + "\n",
     { append: true },
   );
 }
