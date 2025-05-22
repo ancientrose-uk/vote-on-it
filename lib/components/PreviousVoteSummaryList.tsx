@@ -15,9 +15,9 @@ export function PreviousVoteSummaryList(
   }
   const outcomeSummary = getOutcomeSummary(voteSummary);
   let borderColorClass = "border-gray-300";
-  if (outcomeSummary === "Passed") {
+  if (outcomeSummary === "Accepted") {
     borderColorClass = "border-green-600";
-  } else if (outcomeSummary === "Failed") {
+  } else if (outcomeSummary === "Rejected") {
     borderColorClass = "border-red-500";
   }
   return (
@@ -51,10 +51,10 @@ export function PreviousVoteSummaryList(
 
 function getOutcomeSummary(voteSummary: CurrentStats) {
   if (voteSummary.votedFor > voteSummary.votedAgainst) {
-    return "Passed";
+    return "Accepted";
   }
   if (voteSummary.votedFor < voteSummary.votedAgainst) {
-    return "Failed";
+    return "Rejected";
   }
   return "Tied";
 }

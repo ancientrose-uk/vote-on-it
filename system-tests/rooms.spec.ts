@@ -244,7 +244,7 @@ describe("Rooms", () => {
       await Promise.all(
         allBrowsers.map(async (browser) => {
           expect(await browser.getVoteSummary()).toEqual({
-            Outcome: "Passed",
+            Outcome: "Accepted",
             "Votes for": 2,
             "Votes against": 1,
             Abstained: 1,
