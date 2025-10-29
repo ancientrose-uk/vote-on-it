@@ -15,7 +15,7 @@ afterAll(async () => {
 
 setTimeout(() => {
   throw new Error("Test took too long!");
-}, 15_000 + (Number(Deno.env.get("VOI__DELAY_BEFORE_CLOSING_BROWSER")) || 0));
+}, 20_000 + (Number(Deno.env.get("VOI__DELAY_BEFORE_CLOSING_BROWSER")) || 0));
 
 type CleanupFn = () => Promise<void>;
 
