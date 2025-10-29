@@ -1,7 +1,6 @@
 import path from "node:path";
 import { Database } from "jsr:@db/sqlite";
 import { pathJoin, projectDir } from "../paths.ts";
-import { randomUUID } from "node:crypto";
 import { User } from "../AuthHandler.ts";
 
 let db: Database | undefined;
@@ -72,8 +71,28 @@ export function getSession(key: string): string | null {
   return row.username;
 }
 
+// inspired by https://medium.com/deno-the-complete-reference/a-url-shortener-service-in-deno-e2bc5a874911
+function generateRoomUrlName(targetLength = 8) {
+  const arr = new Uint8Array(targetLength / 2);
+  crypto.getRandomValues(arr);
+  const toHex = (d: number) => d.toString(16).padStart(2, "0");
+  return Array.from(arr, toHex).join("");
+}
+
+function roomUrlNameAlreadyExists(roomId: string) {
+  return roomNameByUrlName(roomId) !== null;
+}
+
+function generateUniqueRoomUrlName() {
+  let roomId: string;
+  do {
+    roomId = generateRoomUrlName();
+  } while (roomUrlNameAlreadyExists(roomId));
+  return roomId;
+}
+
 export function createRoom(roomName: string, ownerUsername: string) {
-  const urlName = randomUUID();
+  const urlName = generateUniqueRoomUrlName();
   const db = getDb();
   db.prepare(
     `
