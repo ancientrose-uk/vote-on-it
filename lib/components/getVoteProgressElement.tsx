@@ -26,7 +26,7 @@ export function getVoteProgressElement(
     console.error("!!!!!");
   }
   const totalVotes = stats.totalVotes || 0;
-  const totalGuests = stats.totalGuests || 0;
+  const totalGuests = calculateTotalGuestCount(stats, currentVote);
   if (totalGuests === 0) {
     return <p>No guests connected</p>;
   }
@@ -48,10 +48,24 @@ export function getVoteProgressElement(
         >
         </div>
       </div>
-      <p>
+      <p className="vote-progress-text">
         Vote progress: {percentage}% ({totalVotes} out of {totalGuests} votes)
       </p>
     </>
   );
   return progress;
+}
+
+function calculateTotalGuestCount(
+  stats: CurrentStats,
+  currentVote: CurrentVote,
+) {
+  const allUsersset = new Set();
+  for (const id of stats.guestIds) {
+    allUsersset.add(id);
+  }
+  for (const id of currentVote.alreadyVoted) {
+    allUsersset.add(id);
+  }
+  return allUsersset.size;
 }

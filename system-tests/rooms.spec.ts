@@ -7,8 +7,10 @@ import {
   getButtonSummaryForBrowsers,
   getPresentButtons,
   loginAndCreateRoom,
+  waitForCondition,
   waitForRoomStatusMessageToBecome,
 } from "./helpers/general-tools.ts";
+import { sleep } from "../lib/utils.ts";
 
 const configuredTestUsers = [
   {
@@ -296,10 +298,45 @@ describe("Rooms", () => {
         }),
       );
 
+      let lastSeenPercentageSummary: string = "";
+      const startTimeLookingForPercentage = Date.now();
+      const expectedProgressText = "Vote progress: 100% (4 out of 4 votes)";
+      await waitForCondition(async () => {
+        lastSeenPercentageSummary = await hostBrowser.getVoteProgressText();
+        return lastSeenPercentageSummary === expectedProgressText;
+      }, (error) => {
+        if (error) {
+          throw error;
+        }
+        throw new Error(
+          `Gave up waiting for [${lastSeenPercentageSummary}] to become [${expectedProgressText}]`,
+        );
+      }, 15_000);
+
+      const timeTakenToSeePercentage = Date.now() -
+        startTimeLookingForPercentage;
+      console.log("timeTakenToSeePercentage", timeTakenToSeePercentage);
+
+      await Promise.all(
+        [
+          firstGuestBrowser,
+          secondGuestBrowser,
+          thirdGuestBrowser,
+        ].map(async (browser) => {
+          await browser.close();
+        }),
+      );
+
+      await sleep(timeTakenToSeePercentage * 1.2);
+
+      expect(await hostBrowser.getVoteProgressText()).toEqual(
+        expectedProgressText,
+      );
+
       await hostBrowser.clickButton("End vote");
 
       await Promise.all(
-        allBrowsers.map(async (browser) => {
+        [hostBrowser, fourthGuestBrowser].map(async (browser) => {
           expect(await browser.getVoteSummary()).toEqual({
             Outcome: "Tied",
             "Votes for": 0,

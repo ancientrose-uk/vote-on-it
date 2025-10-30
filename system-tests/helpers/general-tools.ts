@@ -8,8 +8,9 @@ import {
 export async function waitForCondition(
   checkFn: () => Promise<boolean>,
   errorHandler: (error: Error | null) => void,
+  maxTimeToWait?: number,
 ) {
-  const timeout = 2000;
+  const timeout = maxTimeToWait ?? 2000;
   const interval = 50;
   const startTime = Date.now();
   let lastError: Error | null = null;
@@ -44,6 +45,7 @@ export async function waitForRoomStatusMessageToBecome(
   let lastKnownStatusMessage = await browser.getRoomStatusMessage();
   await waitForCondition(async () => {
     if (options.refreshEachTime || turnOffJsEverywhere) {
+      console.log("refreshing browser");
       await browser.refresh();
     }
     lastKnownStatusMessage = options.hackyLookupQuestionInstead
@@ -57,6 +59,7 @@ export async function waitForRoomStatusMessageToBecome(
     return lastKnownStatusMessage === votingStartedMessage;
   }, (err) => {
     if (err) {
+      verboseLog("Error while waiting for room status message:", err);
       err.message = "Error in waitForRoomStatusMessageToBecome: " + err.message;
       throw err;
     }

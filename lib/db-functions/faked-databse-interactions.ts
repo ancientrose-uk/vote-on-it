@@ -46,6 +46,10 @@ export function moveCurrentVoteToPreviousVote(
   }
   delete currentVoteByRoomUrlName[roomUrlName];
   clearCurrentStatsByRoomUrlName(roomUrlName);
+  console.log(
+    "!!! Vote record !!!",
+    JSON.stringify(previousVoteSummaryByRoomUrlName[roomUrlName]),
+  );
   return deepClone(getCurrentStatsByRoomUrlName(roomUrlName));
 }
 
@@ -81,6 +85,7 @@ function ensureRoomHasVotingStats(roomUrlName: string) {
       abstained: 0,
       totalVotes: 0,
       question: getCurrentVoteByRoomUrlName(roomUrlName)?.questionText || "",
+      guestIds: [],
     };
   }
 }
@@ -91,9 +96,13 @@ function ensureRoomHasCurrentAttendeesList(roomUrlName: string) {
   }
 }
 
-function ensureTotalAtendeeCountMatchesInUserListAndStats(roomUrlName: string) {
-  currentStatsByRoomUrlName[roomUrlName].totalGuests =
-    currentUserListByRoomUrlName[roomUrlName].size;
+function ensureTotalAttendeeCountMatchesInUserListAndStats(
+  roomUrlName: string,
+) {
+  const roomDetails = currentStatsByRoomUrlName[roomUrlName];
+  roomDetails.totalGuests = currentUserListByRoomUrlName[roomUrlName].size;
+  roomDetails.guestIds = currentUserListByRoomUrlName[roomUrlName].values()
+    .toArray();
 }
 
 export function addVoterIdToGuestsInRoom(
@@ -103,7 +112,7 @@ export function addVoterIdToGuestsInRoom(
   ensureRoomHasCurrentAttendeesList(roomUrlName);
   ensureRoomHasVotingStats(roomUrlName);
   currentUserListByRoomUrlName[roomUrlName].add(voterId);
-  ensureTotalAtendeeCountMatchesInUserListAndStats(roomUrlName);
+  ensureTotalAttendeeCountMatchesInUserListAndStats(roomUrlName);
 }
 export function removeVoterIdToGuestsInRoom(
   roomUrlName: string,
@@ -112,7 +121,7 @@ export function removeVoterIdToGuestsInRoom(
   ensureRoomHasCurrentAttendeesList(roomUrlName);
   ensureRoomHasVotingStats(roomUrlName);
   currentUserListByRoomUrlName[roomUrlName].delete(voterId);
-  ensureTotalAtendeeCountMatchesInUserListAndStats(roomUrlName);
+  ensureTotalAttendeeCountMatchesInUserListAndStats(roomUrlName);
 }
 
 export function addVoterIdToAlreadyVoted(

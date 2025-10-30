@@ -9,7 +9,6 @@ import {
 export function PreviousVoteSummaryList(
   { voteSummary }: { voteSummary?: CurrentStats },
 ) {
-  console.log("voteSummary", voteSummary);
   if (!voteSummary || voteSummary.votedFor === undefined) {
     return null;
   }

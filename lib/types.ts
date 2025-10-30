@@ -25,6 +25,7 @@ export type CurrentStats = {
   abstained: number;
   totalVotes: number;
   question: string;
+  guestIds: VoterId[];
 };
 export type CurrentVote = {
   questionText: string;

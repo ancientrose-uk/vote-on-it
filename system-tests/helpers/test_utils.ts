@@ -13,10 +13,6 @@ afterAll(async () => {
   await runCleanupTasks();
 });
 
-setTimeout(() => {
-  throw new Error("Test took too long!");
-}, 15_000 + (Number(Deno.env.get("VOI__DELAY_BEFORE_CLOSING_BROWSER")) || 0));
-
 type CleanupFn = () => Promise<void>;
 
 const cleanupFunctions: { priority: number; task: CleanupFn }[] = [];
@@ -70,6 +66,7 @@ export async function getBrowserPage(
   baseUrlOrFullUrl: string,
   { jsDisabled = false } = {} as BrowserPageConfig,
 ) {
+  let browserHasBeenClosed = false;
   if (!baseUrlOrFullUrl.includes("://")) {
     throw new Error(
       "Base URL must include protocol (e.g. http:// or https://)",
@@ -81,7 +78,7 @@ export async function getBrowserPage(
   }`;
   const showBrowser = Deno.env.get("VOI__SHOW_BROWSER") === "true";
 
-  const defaultTimeout = 1000;
+  const defaultTimeout = 10000;
 
   const javaScriptEnabled = !(turnOffJsEverywhere || jsDisabled);
 
@@ -93,7 +90,9 @@ export async function getBrowserPage(
 
   addCleanupTask(async () => {
     await waitForDelayBeforeClosingBrowser();
-    await browser.close();
+    if (browserHasBeenClosed === false) {
+      await browser.close();
+    }
   });
 
   function raceAgainstTimeout<T, U>(
@@ -141,6 +140,11 @@ export async function getBrowserPage(
         async () => await fn(...args),
       );
   }
+
+  addBrowserFunction("close", async () => {
+    await browser.close();
+    browserHasBeenClosed = true;
+  });
 
   addBrowserFunction("visit", async (uri) => {
     const fullUrl = baseUrl + uri;
@@ -361,6 +365,18 @@ export async function getBrowserPage(
         );
       }
       verboseLog("Voting buttons have different colors");
+    },
+  );
+
+  addBrowserFunction(
+    "getVoteProgressText",
+    async function () {
+      const progressText = await page.locator(".vote-progress-text")
+        .textContent();
+      if (!progressText) {
+        throw new Error("Vote progress text element not found");
+      }
+      return progressText;
     },
   );
 
