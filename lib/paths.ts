@@ -1,4 +1,4 @@
-import * as path from "jsr:@std/path";
+import * as path from "@std/path";
 
 const dirname = path.dirname(new URL(import.meta.url).pathname);
 

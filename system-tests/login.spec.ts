@@ -1,5 +1,5 @@
-import { expect } from "jsr:@std/expect";
-import { describe, it } from "jsr:@std/testing/bdd";
+import { expect } from "@std/expect";
+import { describe, it } from "@std/testing/bdd";
 import { getBrowserPage, startServer } from "./helpers/test_utils.ts";
 import { prepareUsernamesAndPasswords } from "./helpers/password-helpers.ts";
 

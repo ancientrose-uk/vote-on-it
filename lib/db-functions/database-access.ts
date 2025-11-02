@@ -1,5 +1,5 @@
 import path from "node:path";
-import { Database } from "jsr:@db/sqlite";
+import { Database } from "@db/sqlite";
 import { pathJoin, projectDir } from "../paths.ts";
 import { User } from "../AuthHandler.ts";
 

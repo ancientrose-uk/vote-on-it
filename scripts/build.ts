@@ -2,7 +2,7 @@ import { pathJoin, projectDir, publicDir, webserverDir } from "../lib/paths.ts";
 
 const start = Date.now();
 
-import { bundle } from "jsr:@deno/emit";
+import { bundle } from "@deno/emit";
 import { execAndWaitOrThrow } from "../lib/exec.ts";
 import { runWithLockfile } from "../lib/runWithLockfile.ts";
 

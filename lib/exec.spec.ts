@@ -1,5 +1,5 @@
-import { expect } from "jsr:@std/expect";
-import { describe, it } from "jsr:@std/testing/bdd";
+import { expect } from "@std/expect";
+import { describe, it } from "@std/testing/bdd";
 const { execAndWait, execAndWaitOrThrow } = await import("./exec.ts");
 
 describe("execAndWait", () => {

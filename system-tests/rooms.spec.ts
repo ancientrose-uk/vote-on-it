@@ -6,8 +6,8 @@ import {
   turnOffJsEverywhere,
 } from "./helpers/test_utils.ts";
 import { prepareUsernamesAndPasswords } from "./helpers/password-helpers.ts";
-import { beforeEach, describe, it } from "jsr:@std/testing/bdd";
-import { expect } from "jsr:@std/expect";
+import { beforeEach, describe, it } from "@std/testing/bdd";
+import { expect } from "@std/expect";
 import { sleep, verboseLog } from "../lib/utils.ts";
 
 const configuredTestUsers = [

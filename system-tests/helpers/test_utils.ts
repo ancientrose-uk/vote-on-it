@@ -1,7 +1,7 @@
 import { chromium } from "playwright";
 import { EventEmitter } from "node:events";
 import { verboseLog } from "../../lib/utils.ts";
-import { afterAll } from "jsr:@std/testing/bdd";
+import { afterAll } from "@std/testing/bdd";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 

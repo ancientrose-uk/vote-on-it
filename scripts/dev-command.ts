@@ -159,7 +159,7 @@ function runDenoCommand(command: string) {
   let manuallyStopped = false;
   const cmd = new Deno.Command("deno", {
     env: getEnvToPassThrough(command),
-    args: ["task", command, "--trace-leaks"],
+    args: ["task", command],
     stdout: "inherit",
     stderr: "inherit",
   });

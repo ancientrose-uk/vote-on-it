@@ -1,7 +1,7 @@
 import { getPort, setRunningPort, verboseLog } from "../lib/utils.ts";
 import { lookupRoute } from "./routes.tsx";
 import { AuthHandler } from "../lib/AuthHandler.ts";
-import { serveFile } from "jsr:@std/http/file-server";
+import { serveFile } from "@std/http/file-server";
 import path from "node:path";
 import { defaultHandler } from "../routes/static-routes.tsx";
 
